@@ -17,7 +17,7 @@ This will start the [PostgreSQL](https://www.postgresql.org/) database.
 After that, you need to run the NestJS application. To do so, you need to execute the following command in the root directory of the project:
 
 ```bash
-npm run start:dev
+pnpm run start:dev
 ```
 
 This will start the NestJS application and the [Swagger](https://swagger.io/) documentation.
@@ -25,7 +25,7 @@ This will start the NestJS application and the [Swagger](https://swagger.io/) do
 To run the [Prisma](https://www.prisma.io/) client, you need to execute the following command in the root directory of the project:
 
 ```bash
-npm run prisma:dev
+pnpm run prisma:dev
 ```
 
 This will start the Prisma client.
