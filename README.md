@@ -32,3 +32,16 @@ This will start the Prisma client.
 
 ## Swagger Documentation
 The Swagger documentation can be found at [http://localhost:3000/swagger](http://localhost:3000/swagger).
+
+## Test
+
+```bash
+# unit tests
+$ pnpm run test
+
+# e2e tests
+$ pnpm run test:e2e
+
+# test coverage
+$ pnpm run test:cov
+```
