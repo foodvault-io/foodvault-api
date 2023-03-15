@@ -1,8 +1,8 @@
 {
   "name": "foodvault-api",
   "version": "0.0.1",
-  "description": "",
-  "author": "",
+  "description": "Backend Server for FoodVault",
+  "author": "Miguel Chevres",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
@@ -20,15 +20,18 @@
     "test:e2e": "jest --config ./test/jest-e2e.json"
   },
   "dependencies": {
+    "@nestjs/class-validator": "^0.13.4",
     "@nestjs/common": "^9.0.0",
     "@nestjs/core": "^9.0.0",
     "@nestjs/platform-express": "^9.0.0",
     "reflect-metadata": "^0.1.13",
-    "rxjs": "^7.2.0"
+    "rxjs": "^7.2.0",
+    "webpack": "^5.0.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^9.0.0",
     "@nestjs/schematics": "^9.0.0",
+    "@nestjs/swagger": "^6.2.1",
     "@nestjs/testing": "^9.0.0",
     "@types/express": "^4.17.13",
     "@types/jest": "29.2.4",
