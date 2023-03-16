@@ -41,7 +41,7 @@ jobs:
         with: 
           coverage-summary-path: ./coverage/coverage-summary.json
           title: Test Coverage Report FoodVault
-          badge-title: Coverage
+          badge-title: [Coverage, Statements, Branches, Functions]
           hide-comment: false
           create-new-comment: false
           hide-summary: false
