@@ -1,0 +1,29 @@
+name: Test Coverage Report
+on: [push]
+
+jobs: 
+  build: 
+    runs-on: ubuntu-latest
+    steps: 
+      - uses: actions/checkout@v3
+
+      - name: Install Dependencies
+        run: npm ci
+      
+      - name: Run Tests
+        run: |
+          npx jest --coverage --coverageReporters json-summary text | tee ./coverage.txt
+
+      - name: Jest Coverage Comment
+        uses: MishaKav/jest-coverage-comment@main
+        with: 
+          coverage-summary-path: ./coverage/coverage-summary.json
+          title: Test Coverage Report FoodVault
+          badge-title: Coverage
+          hide-comment: false
+          create-new-comment: false
+          hide-summary: false
+          junitxml-title: Test Report
+          junitxml-path: junit.xml
+          coverage-title: Branch Test Coverage
+          coverage-path: ./coverage.txt
