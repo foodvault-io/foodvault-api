@@ -1,5 +1,7 @@
 # FoodVault API Docs
 
+![Statements](https://img.shields.io/badge/statements-65%25-red.svg?style=flat&logo=jest) ![Branches](https://img.shields.io/badge/branches-100%25-brightgreen.svg?style=flat&logo=jest) ![Functions](https://img.shields.io/badge/functions-100%25-brightgreen.svg?style=flat&logo=jest) ![Lines](https://img.shields.io/badge/lines-64.28%25-red.svg?style=flat&logo=jest) 
+
 This is the documentation for the FoodVault API. It is written using [NestJS](nestjs.com) and [Swagger](swagger.io).
 
 ## Getting Started
