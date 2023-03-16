@@ -9,7 +9,7 @@ import {
 import { Example } from './entities/example.entity';
 
 @ApiTags('Example')
-@Controller('example')
+@Controller('examples')
 export class ExampleController {
   constructor(private readonly exampleService: ExampleService) {}
 
