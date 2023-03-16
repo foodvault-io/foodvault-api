@@ -1,9 +1,14 @@
 # Environment Variables
 .env 
+.env.test
 .env.development.local
 .env.test.local
 .env.production.local
 .env.local
+
+# Database files
+/backup-db 
+/db 
 
 # compiled output
 /dist
