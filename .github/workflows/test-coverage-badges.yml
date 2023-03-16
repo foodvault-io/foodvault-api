@@ -1,8 +1,9 @@
-name: Test Coverage Report
-on: [pull_request]
+name: Test Coverage Badges for Readme
+
+on: [push]
 
 jobs: 
-  build: 
+  bump: 
     runs-on: ubuntu-latest
     steps: 
       - name: Checkout
@@ -36,16 +37,5 @@ jobs:
         run: |
           npx jest --coverage --coverageReporters json-summary text | tee ./coverage.txt
 
-      - name: Jest Coverage Comment
-        uses: MishaKav/jest-coverage-comment@main
-        with: 
-          coverage-summary-path: ./coverage/coverage-summary.json
-          title: Test Coverage Report FoodVault
-          badge-title: Coverage
-          hide-comment: false
-          create-new-comment: false
-          hide-summary: false
-          junitxml-title: Test Report
-          junitxml-path: junit.xml
-          coverage-title: Branch Test Coverage
-          coverage-path: ./coverage.txt
+      - name: Jest Coverage Badges
+        run: pnpm run make-badges:ci
