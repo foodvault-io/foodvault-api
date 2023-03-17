@@ -19,6 +19,10 @@ export class ExampleService {
   }
 
   findOne(id: number) {
-    return this.examples[id];
+    return this.prisma.post.findFirst({
+      where: {
+        id
+      }
+    });
   }
 }
