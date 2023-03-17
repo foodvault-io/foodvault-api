@@ -15,11 +15,11 @@ export class ExampleService {
   }
 
   findAll() {
-    return this.prisma.post.findMany();
+    return this.prisma.user.findMany();
   }
 
   findOne(id: number) {
-    return this.prisma.post.findFirst({
+    return this.prisma.user.findFirst({
       where: {
         id
       }
