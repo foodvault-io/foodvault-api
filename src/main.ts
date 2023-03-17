@@ -1,6 +1,6 @@
 import { NestFactory, HttpAdapterHost } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { ValidationPipe } from '@nestjs/common';
+import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { PrismaClientExceptionFilter } from './prisma-client-exception/prisma-client-exception.filter';
 import {
   SwaggerModule,
@@ -10,6 +10,14 @@ import {
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Make every Route start with /api
+  app.setGlobalPrefix('api');
+
+  // Set version of the API
+  app.enableVersioning({
+    type: VersioningType.URI,
+  })
 
   // Enable CORS
   app.enableCors();
@@ -25,7 +33,7 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('FoodVault API')
     .setDescription('FoodVault API description')
-    .setVersion('0.0.1')
+    .setVersion('v1')
     .addTag('FoodVault')
     .build();
 

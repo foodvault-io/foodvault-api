@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Version } from '@nestjs/common';
 import { ExampleService } from './example.service';
 import { CreateExampleDto } from './dto/create-example.dto';
 import {
@@ -9,7 +9,10 @@ import {
 import { Example } from './entities/example.entity';
 
 @ApiTags('Example')
-@Controller('example')
+@Controller({
+  path: 'example',
+  version: '1',
+})
 export class ExampleController {
   constructor(private readonly exampleService: ExampleService) {}
 
