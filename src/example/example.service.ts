@@ -1,9 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { CreateExampleDto } from './dto/create-example.dto';
 import { Example } from './entities/example.entity';
+import { PrismaService } from 'src/prisma/prisma.service';
 
 @Injectable()
 export class ExampleService {
+  constructor(private readonly prisma: PrismaService) {}
+
   private readonly examples: Example[] = [];
 
   create(createExampleDto: CreateExampleDto) {
@@ -12,10 +15,14 @@ export class ExampleService {
   }
 
   findAll() {
-    return this.examples;
+    return this.prisma.post.findMany();
   }
 
   findOne(id: number) {
-    return this.examples[id];
+    return this.prisma.post.findFirst({
+      where: {
+        id
+      }
+    });
   }
 }
