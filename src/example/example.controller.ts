@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Version, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, NotFoundException } from '@nestjs/common';
 import { ExampleService } from './example.service';
 import { CreateExampleDto } from './dto/create-example.dto';
 import {
@@ -7,7 +7,6 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Example } from './entities/example.entity';
-import { NotFoundError } from 'rxjs';
 
 @ApiTags('Example')
 @Controller({

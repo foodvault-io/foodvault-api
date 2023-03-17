@@ -1,6 +1,14 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
+// TODO: 
+// - Include Chef's Tables, 
+// - Bookings/Time Cards, 
+// - Payments/Currency/Transactions
+// - Reviews 
+// - Messaging
+// - Notifications 
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,17 +19,198 @@ datasource db {
 }
 
 model User {
-  id Int @id @default(autoincrement())
-  email String 
-  name String?
-  posts Post[]
+  id String @id @default(uuid())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  firstName String 
+  lastName String
+  email String @unique
+  hashedPassword String?
+  image String?
+
+  role Role @relation(fields: [roleId], references: [id])
+  roleId Int @default(1)
+  
+  sessions Session[]
+  accounts Account[]
+  kitchenDetails KitchenDetails?
 }
 
-model Post {
+model Role {
   id Int @id @default(autoincrement())
-  title String
-  content String?
-  published Boolean @default(false)
-  author User @relation(fields: [authorId], references: [id])
-  authorId Int
+  name String @unique
+  users User[]
+}
+
+model Account {
+  id String @id @default(uuid())
+
+  userId String 
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+
+  providerType String @default("local")
+  provider String @default("local")
+  providerAccountId String 
+
+  refreshToken String?
+  accessToken String?
+  accessTokenExpires Int?
+  tokenType String?
+  scope String?
+  idToken String?
+  sessionState String?
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id String @id @default(uuid()) 
+  sessionToken String @unique 
+  expires DateTime
+
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String 
+  token String @unique
+  expires DateTime
+
+  @@unique([identifier, token])
+}
+
+model KitchenDetails {
+  // Kitchen Details
+  id String @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  name String
+  description String
+  phone String
+  website String?
+  status String
+
+  // Location Data
+  address String
+
+  cityId String
+  city Cities @relation(fields: [cityId], references: [id])
+
+  stateId String
+  state State @relation(fields: [stateId], references: [id])
+
+  countryId String
+  country Country @relation(fields: [countryId], references: [id])
+
+  zip String
+  lat String?
+  lon String?
+
+  // Kitchen Certificates & identification
+  certificates Certificates[]
+  identificationUrl String
+
+  // Chefs Allowed in Kitchen
+  chefsAllowed Int?
+  
+  // Kitchen Owner 
+  userId String @unique
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  equipmentList KitchenEquipment?
+  additionalEquipment String 
+
+  kitchenMedia Media[]
+}
+
+model KitchenEquipment {
+  id String @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  amenities KitchenAmenities[]
+
+  kitchenDetailsId String @unique
+  kitchenDetails KitchenDetails @relation(fields: [kitchenDetailsId], references: [id], onDelete: Cascade)
+}
+
+model KitchenAmenities{
+  id String @id @default(uuid())
+  name String
+  iconImage String
+  status String
+
+  kitchenEquipment KitchenEquipment[]
+}
+
+model Cities {
+  id String @id @default(uuid())
+  name String
+  status String
+
+  stateId String
+  state State @relation(fields: [stateId], references: [id], onDelete: Cascade)
+
+  kitchenDetails KitchenDetails[]
+
+}
+
+model State {
+  id String @id @default(uuid())
+  name String
+  code String
+  status String
+
+  city Cities[]
+
+  countryId String
+  country Country @relation(fields: [countryId], references: [id], onDelete: Cascade)
+
+  kitchenDetails KitchenDetails[]
+}
+
+model Country {
+  id String @id @default(uuid())
+  name String
+  code String
+  status String
+
+  state State[]
+
+  kitchenDetails KitchenDetails[]
+}
+
+model Certificates {
+  id String @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  fileName String
+  fileSize Int 
+  fileUrl String
+  fileType String
+
+  kitchenDetailsId String
+  kitchenDetails KitchenDetails @relation(fields: [kitchenDetailsId], references: [id], onDelete: Cascade)
+}
+
+model Media {
+  id String @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  fileName String
+  fileSize Int 
+  fileUrl String
+  fileType String
+
+  kitchenDetailsId String
+  kitchenDetails KitchenDetails @relation(fields: [kitchenDetailsId], references: [id], onDelete: Cascade)
 }
