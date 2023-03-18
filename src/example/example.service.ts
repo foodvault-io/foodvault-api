@@ -18,7 +18,7 @@ export class ExampleService {
     return this.prisma.user.findMany();
   }
 
-  findOne(id: number) {
+  findOne(id: string) {
     return this.prisma.user.findFirst({
       where: {
         id

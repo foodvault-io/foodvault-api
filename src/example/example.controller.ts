@@ -41,7 +41,7 @@ export class ExampleController {
     type: Example,
   })
   async findOne(@Param('id') id: string) {
-    const post = await this.exampleService.findOne(+id);
+    const post = await this.exampleService.findOne(id);
     if (!post) {
       throw new NotFoundException(`Post with ID ${id} not found`);
     }
