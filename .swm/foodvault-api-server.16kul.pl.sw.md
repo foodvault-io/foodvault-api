@@ -2,7 +2,7 @@
 id: 16kul
 title: FoodVault API Server
 file_version: 1.1.2
-app_version: 1.4.5
+app_version: 1.4.6
 ---
 
 <!-- Intro - Do not remove this comment -->
@@ -19,6 +19,7 @@ app_version: 1.4.5
 6. [Chef Routes](chef-routes.zx84e.sw.md)
 7. [Tests](tests.bi7zo.sw.md)
 8. [Time Card Routes](time-card-routes.fpcar.sw.md)
+9. [Payment With Stripe](payment-with-stripe.9mjc4.sw.md)
 
 
 <br/>
