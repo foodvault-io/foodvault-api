@@ -3,8 +3,8 @@
 
 // TODO: 
 // - Include Chef's Tables, 
-// - Bookings/Time Cards, 
-// - Payments/Currency/Transactions
+// -[x] Bookings/Time Cards, 
+// -[x] Payments/Currency/Transactions (Stripe is taking care of this)
 // - Reviews 
 // - Messaging
 // - Notifications 
@@ -31,18 +31,64 @@ model User {
   hashedPassword String?
   image String?
 
-  role Role @relation(fields: [roleId], references: [id])
-  roleId Int @default(1)
+  role RoleEnum @default(USER)
   
   sessions Session[]
   accounts Account[]
-  kitchenDetails KitchenDetails?
+  kitchenRole KitchenUser?
+  chefRole ChefUser?
 }
 
-model Role {
-  id Int @id @default(autoincrement())
-  name String @unique
-  users User[]
+enum RoleEnum {
+  ADMIN @map("admin")
+  USER @map("user")
+  KITCHEN @map("kitchen")
+  CHEF @map("chef")
+}
+
+enum UserStatus {
+  ACTIVE @map("active")
+  INACTIVE @map("inactive")
+  PENDING @map("pending")
+  REJECTED @map("rejected")
+  SUSPENDED @map("suspended")
+}
+
+model KitchenUser {
+  id String @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  status UserStatus @default(PENDING)
+
+  userId String @unique
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  kitchenDetails KitchenDetails[]
+}
+
+model ChefUser {
+  id String @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  status UserStatus @default(PENDING)
+
+  // Chef Certificates & identification
+  certificates Certificates[]
+  identificationUrl String
+
+  accountCredits Int @default(0)
+  purchaseDate DateTime?
+  creditPackage BoughtCredits[]
+
+  userId String @unique
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  chefDetails ChefCompanyDetails[]
+  payments Payment[]
 }
 
 model Account {
@@ -80,8 +126,20 @@ model VerificationToken {
   identifier String 
   token String @unique
   expires DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([identifier, token])
+}
+
+// Kitchen Models: Kitchen Details, Kitchen Equipment, Kitchen Amenities, Kitchen Time Slots
+
+enum KitchenStatus {
+  ACTIVE @map("active")
+  INACTIVE @map("inactive")
+  PENDING @map("pending")
+  REJECTED @map("rejected")
+  SUSPENDED @map("suspended")
 }
 
 model KitchenDetails {
@@ -90,17 +148,22 @@ model KitchenDetails {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   deletedAt DateTime?
-  name String
+
+  // Kitchen Details
+  name String @unique
   description String
   phone String
   website String?
-  status String
+  status KitchenStatus @default(PENDING) 
+
+  // Time Slots
+  timeSlots TimeSlot[]
 
   // Location Data
   address String
 
   cityId String
-  city Cities @relation(fields: [cityId], references: [id])
+  city City @relation(fields: [cityId], references: [id])
 
   stateId String
   state State @relation(fields: [stateId], references: [id])
@@ -118,10 +181,13 @@ model KitchenDetails {
 
   // Chefs Allowed in Kitchen
   chefsAllowed Int?
+
+  // Kitchen Reviews
+  kitchenReviews KitchenReviews[]
   
   // Kitchen Owner 
-  userId String @unique
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ownerId String @unique
+  kitchenOwner KitchenUser @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   equipmentList KitchenEquipment?
   additionalEquipment String 
@@ -150,7 +216,64 @@ model KitchenAmenities{
   kitchenEquipment KitchenEquipment[]
 }
 
-model Cities {
+// Chef Models: Chef Details, Chef Time Slots, Chef Reviews
+enum ChefStatus {
+  ACTIVE @map("active")
+  INACTIVE @map("inactive")
+  PENDING @map("pending")
+  REJECTED @map("rejected")
+  SUSPENDED @map("suspended")
+}
+
+model ChefCompanyDetails {
+  id String @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  name String
+  description String
+  phone String
+  website String?
+  status ChefStatus @default(PENDING)
+
+  // Time Slots Selected
+  timeSlots TimeSlot[]
+
+  // Location Data
+  address String
+
+  cityId String
+  city City @relation(fields: [cityId], references: [id])
+
+  stateId String
+  state State @relation(fields: [stateId], references: [id])
+
+  countryId String
+  country Country @relation(fields: [countryId], references: [id])
+
+  zip String
+  lat String?
+  lon String?
+
+  // Chefs Allowed in Kitchen
+  kitchensAllowed Int?
+
+  // Chef Reviews
+  chefReviews ChefReviews[]
+
+  // Kitchen Reviews
+  kitchenReviews KitchenReviews[]
+
+  // Chef Owner 
+  ownerId String 
+  chefOwner ChefUser @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  chefMedia Media[]
+}
+
+
+// Location Models: Cities, States, Countries
+model City {
   id String @id @default(uuid())
   name String
   status String
@@ -159,7 +282,7 @@ model Cities {
   state State @relation(fields: [stateId], references: [id], onDelete: Cascade)
 
   kitchenDetails KitchenDetails[]
-
+  chefDetails ChefCompanyDetails[]
 }
 
 model State {
@@ -168,12 +291,13 @@ model State {
   code String
   status String
 
-  city Cities[]
+  city City[]
 
   countryId String
   country Country @relation(fields: [countryId], references: [id], onDelete: Cascade)
 
   kitchenDetails KitchenDetails[]
+  chefDetails ChefCompanyDetails[]
 }
 
 model Country {
@@ -185,20 +309,59 @@ model Country {
   state State[]
 
   kitchenDetails KitchenDetails[]
+  chefDetails ChefCompanyDetails[]
 }
 
+// Review Models: Kitchen Reviews, Chef Reviews
+model KitchenReviews {
+  id String @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  review String
+  rating Int
+
+  kitchenDetailsId String
+  kitchenDetails KitchenDetails @relation(fields: [kitchenDetailsId], references: [id], onDelete: Cascade)
+
+  chefId String
+  chef ChefCompanyDetails @relation(fields: [chefId], references: [id], onDelete: Cascade)
+}
+
+model ChefReviews {
+  id String @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  review String
+  rating Int
+
+  chefDetailsId String
+  chef ChefCompanyDetails @relation(fields: [chefDetailsId], references: [id], onDelete: Cascade)
+
+  kitchenDetailsId String
+  
+}
+
+
+// Media Models: Certificates, Media, etc.
 model Certificates {
   id String @id @default(uuid())
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   deletedAt DateTime?
   fileName String
-  fileSize Int 
+  fileSize BigInt 
   fileUrl String
   fileType String
 
-  kitchenDetailsId String
-  kitchenDetails KitchenDetails @relation(fields: [kitchenDetailsId], references: [id], onDelete: Cascade)
+  kitchenDetailsId String?
+  kitchenDetails KitchenDetails? @relation(fields: [kitchenDetailsId], references: [id], onDelete: Cascade)
+
+  chefDetailsId String?
+  chefDetails ChefUser? @relation(fields: [chefDetailsId], references: [id], onDelete: Cascade)
 }
 
 model Media {
@@ -207,10 +370,131 @@ model Media {
   updatedAt DateTime @updatedAt
   deletedAt DateTime?
   fileName String
-  fileSize Int 
+  fileSize BigInt 
   fileUrl String
   fileType String
 
+  kitchenDetailsId String?
+  kitchenDetails KitchenDetails? @relation(fields: [kitchenDetailsId], references: [id], onDelete: Cascade)
+
+  chefDetailsId String?
+  chefDetails ChefCompanyDetails? @relation(fields: [chefDetailsId], references: [id], onDelete: Cascade)
+}
+
+// Booking Models: Booking, Booking Time Slots, Booking Payments, Booking Reviews
+
+enum TimeSlotStatus {
+  AVAILABLE @map("available")
+  BOOKED @map("booked")
+  PENDING @map("pending")
+  CANCELLED @map("cancelled")
+}
+
+// Create model of a time slot
+model TimeSlot {
+  id String @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  // Cost Details
+  creditCost Int
+  creditPaid Int?
+  isPaid Boolean @default(false)
+  isRefunded Boolean @default(false)
+  refundReason String?
+  refundDate DateTime?
+  refundAmount Int?
+
+  // Time Slot Details
+  timeSlotDate DateTime
+  startTime DateTime
+  endTime DateTime
+  timeSlotDuration Int
+  timeSlotType String?
+  timeSlotNotes String?
+  timeSlotStatus TimeSlotStatus @default(AVAILABLE)
+
+  timeZone String?
+  canceledDate DateTime?
+  rejectedDate DateTime?
+  cancelationReasons String?
+  rejectionReason String?
+
+  // Chef Selecting Time Slot
+  chefId String?
+  chef ChefCompanyDetails? @relation(fields: [chefId], references: [id])
+
+  chefsAttending Int
+
+
+  // Time Slot Kitchen Details
   kitchenDetailsId String
   kitchenDetails KitchenDetails @relation(fields: [kitchenDetailsId], references: [id], onDelete: Cascade)
+}
+
+// Credits Model
+enum CreditStatus {
+  ACTIVE @map("active")
+  INACTIVE @map("inactive")
+}
+
+model CreditPackages {
+  id String @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  name String
+  description String
+  creditsGranted Int
+  pricePerCredit Decimal
+  totalPrice Decimal
+  status CreditStatus @default(ACTIVE)
+
+  creditBought BoughtCredits[]
+}
+
+model BoughtCredits {
+  id String @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  creditsBought Int
+  transactoinId String @default(uuid())
+
+  // Credit Package Details
+  creditPackageId String
+  creditPackage CreditPackages @relation(fields: [creditPackageId], references: [id], onDelete: Cascade)
+
+  // Chef Details
+  chefId String
+  chef ChefUser @relation(fields: [chefId], references: [id], onDelete: Cascade)
+
+  // Payment Details
+  paymentId String
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+}
+
+model Payment {
+  id String @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  // Payment Details
+  paymentId String
+  paymentMethod String
+  paymentStatus String
+  paymentAmount Decimal
+  paymentCurrency String
+  paymentDate DateTime
+  paymentNotes String?
+
+  // Payment Details
+  chefId String
+  chef ChefUser @relation(fields: [chefId], references: [id], onDelete: Cascade)
+
+  creditsBought BoughtCredits[]
 }
