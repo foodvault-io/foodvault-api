@@ -62,6 +62,9 @@ model KitchenUser {
 
   status UserStatus @default(PENDING)
 
+  // Credit Info
+  accountCredits Int @default(0)
+
   userId String @unique
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -158,6 +161,7 @@ model KitchenDetails {
 
   // Time Slots
   timeSlots TimeSlot[]
+  totalCreditsReceived Int @default(0) // Total Credits Received from Chefs for Bookings
 
   // Location Data
   address String
