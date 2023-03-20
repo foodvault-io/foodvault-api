@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, Version, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, NotFoundException } from '@nestjs/common';
 import { ExampleService } from './example.service';
 import { CreateExampleDto } from './dto/create-example.dto';
 import {
@@ -7,7 +7,6 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Example } from './entities/example.entity';
-import { NotFoundError } from 'rxjs';
 
 @ApiTags('Example')
 @Controller({
@@ -42,7 +41,7 @@ export class ExampleController {
     type: Example,
   })
   async findOne(@Param('id') id: string) {
-    const post = await this.exampleService.findOne(+id);
+    const post = await this.exampleService.findOne(id);
     if (!post) {
       throw new NotFoundException(`Post with ID ${id} not found`);
     }

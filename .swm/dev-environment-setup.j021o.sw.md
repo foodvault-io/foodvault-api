@@ -2,7 +2,7 @@
 id: j021o
 title: Dev Environment Setup
 file_version: 1.1.2
-app_version: 1.4.5
+app_version: 1.4.6
 ---
 
 To run your local dev environment you will need a few things on your machine. Follow the steps below.
@@ -17,8 +17,6 @@ To run your local dev environment you will need a few things on your machine. Fo
     
 *   Install [NestJS CLI](https://docs.nestjs.com/) globally
     
-
-<br/>
 
 ## Getting the sources
 
@@ -78,7 +76,7 @@ Full list of scripts for this project:
 26         "test:watch": "jest --watch",
 27         "test:cov": "jest --coverage",
 28         "make-badges": "istanbul-badges-readme --logo='jest' --badge-style='plastic'",
-29         "make-badges:ci": "pnpm run make-badges --logo='jest' --badge-style='plastic' -- --ci",
+29         "make-badges:ci": "pnpm run make-badges -- --ci",
 30         "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
 31         "test:e2e": "jest --config ./test/jest-e2e.json"
 32       },
