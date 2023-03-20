@@ -81,8 +81,8 @@ model ChefUser {
 
   // Chef Certificates & identification
   certificates Certificates[]
-  identificationUrl String
 
+  // Credit Info
   accountCredits Int @default(0)
   purchaseDate DateTime?
   creditPackage BoughtCredits[]
@@ -181,7 +181,6 @@ model KitchenDetails {
 
   // Kitchen Certificates & identification
   certificates Certificates[]
-  identificationUrl String
 
   // Chefs Allowed in Kitchen
   chefsAllowed Int?
@@ -194,7 +193,7 @@ model KitchenDetails {
   kitchenOwner KitchenUser @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   equipmentList KitchenEquipment?
-  additionalEquipment String 
+  additionalEquipment String?
 
   kitchenMedia Media[]
 }
