@@ -98,7 +98,11 @@
       "/node_modules/",
       "/dist/",
       "<rootDir>/prisma/",
-      "<rootDir>/example/"
+      "<rootDir>/example/",
+      "<rootDir>/auth/guards/",
+      "<rootDir>/auth/strategies/",
+      "<rootDir>/prisma-client-exception/",
+      "<rootDir>/users/entities/"
     ],
     "coveragePathIgnorePatterns": [
       "/node_modules/",
@@ -106,7 +110,10 @@
       "<rootDir>/example/",
       "<rootDir>/main.ts",
       "<rootDir>/prisma/",
-      "<rootDir>/prisma-client-exception/"
+      "<rootDir>/prisma-client-exception/",
+      "<rootDir>/auth/guards/",
+      "<rootDir>/auth/strategies/",
+      "<rootDir>/users/entities/"
     ],
     "reporters": [
       "default",
