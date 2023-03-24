@@ -213,8 +213,9 @@ model KitchenEquipment {
 model KitchenAmenities{
   id String @id @default(uuid())
   name String
-  iconImage String
-  status String
+  iconImage String?
+  status String?
+  required Boolean @default(false)
 
   kitchenEquipment KitchenEquipment[]
 }
@@ -272,6 +273,30 @@ model ChefCompanyDetails {
   chefOwner ChefUser @relation(fields: [ownerId], references: [id], onDelete: Cascade)
 
   chefMedia Media[]
+
+  chefEquipment ChefEquipment?
+}
+
+model ChefEquipment {
+  id String @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+
+  amenities ChefAmenities[]
+
+  chefCompanyId String @unique
+  chefCompany ChefCompanyDetails @relation(fields: [chefCompanyId], references: [id], onDelete: Cascade)
+}
+
+model ChefAmenities{
+  id String @id @default(uuid())
+  name String
+  iconImage String?
+  status String?
+  required Boolean @default(false)
+
+  chefEquipment ChefEquipment[]
 }
 
 
