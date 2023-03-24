@@ -1,10 +1,19 @@
-import { BadRequestException, ForbiddenException, Injectable } from '@nestjs/common';
+import {
+    BadRequestException,
+    ForbiddenException,
+    Injectable,
+    NotFoundException
+} from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
-import { LocalAuthDto, LocalSignInDto } from './dto';
-import { PrismaClientKnownRequestError } from '@prisma/client/runtime';
-import * as bcryptjs from 'bcryptjs';
+import { LocalAuthDto } from './dto';
+import { randomBytes, scrypt as _scrypt } from 'crypto';
+import { promisify } from 'util';
+import { User } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
+import { JwtPayload } from './interface';
+
+const scrypt = promisify(_scrypt);
 
 @Injectable()
 export class AuthService {
@@ -12,94 +21,127 @@ export class AuthService {
         private readonly prisma: PrismaService,
         private readonly jwtService: JwtService,
         private config: ConfigService,
-    ) {}
+    ) { }
 
-    async signUpLocally(localAuthDto: LocalAuthDto) {
+    // Get/Create User:
+    async createUser(createUserDto: LocalAuthDto) {
+        const user = await this.prisma.user.create({
+            data: {
+                email: createUserDto.email,
+                firstName: createUserDto.firstName,
+                lastName: createUserDto.lastName,
+                hashedPassword: createUserDto.password,
+            }
+        });
+
+        return user;
+    }
+
+    async findOneById(id: string): Promise<User | undefined> {
+        return await this.prisma.user.findFirst({
+            where: { id },
+        });
+    }
+
+    async findOneByEmail(email: string): Promise<User | undefined> {
+        return await this.prisma.user.findFirst({
+            where: { email },
+        });
+    }
+
+
+    // Local Login & SignUp Methods:
+
+    async signUpLocally(localAuthDto: LocalAuthDto): Promise<{ access_token: string }> {
         // Hash password
-        const salt = await bcryptjs.genSalt(10);
-        
-        if (!salt) {
-            throw new Error('Error generating salt');
-        }
+        const salt = randomBytes(10).toString('hex');
 
-        const hashedPassword = await bcryptjs.hash(localAuthDto.password, salt); 
+        const buf = (await scrypt(localAuthDto.password, salt, 64)) as Buffer;
 
-        if (!hashedPassword) {
-            throw new Error('Error hashing password');
-        }
+        // Join the hashed password and salt together
+        const securePassword = `${salt}.${buf.toString('hex')}`;
 
-        // Create User
+        // Create User:
         try {
-            const user = await this.prisma.user.create({
-                data: {
-                    email: localAuthDto.email,
-                    firstName: localAuthDto.firstName,
-                    lastName: localAuthDto.lastName,
-                    hashedPassword: hashedPassword,
-                },
+            const user = await this.createUser({
+                email: localAuthDto.email,
+                firstName: localAuthDto.firstName,
+                lastName: localAuthDto.lastName,
+                password: securePassword,
             });
+            const jwtToken = await this.createToken(
+                user.id,
+                user.email,
+                user.role,
+            );
 
-            return JSON.stringify({
-                user: user, //TODO:  Remove this from here. It's not secure to return the user object. We can store that in the JWT payload.
-            });
+            return {
+                access_token: jwtToken,
+            };
         } catch (err) {
-            if (err instanceof PrismaClientKnownRequestError) {
-                if (err.code === 'P2002') {
-                    throw new BadRequestException('Email already exists');
-                }
+            if (err.code === 'P2002') {
+                throw new BadRequestException('Email already exists');
             }
             throw err;
         }
     }
 
-    async signInLocally(localSignInDto: LocalSignInDto) {
-        // Find user
-        const user = await this.prisma.user.findUnique({
-            where: {
-                email: localSignInDto.email,
-            },
-        });
+    async logInLocally(email: string, password: string): Promise<{ auth_token: string }> {
+        // Check if user email exists
+        const checkUser = await this.findOneByEmail(email);
 
-        if (!user) {
-            throw new ForbiddenException('Invalid credentials');
+        if (!checkUser) {
+            throw new NotFoundException('User not Found');
         }
 
-        // Compare password
-        const isMatch = await bcryptjs.compare(localSignInDto.password, user.hashedPassword);
+        // Split the hashed password and salt
+        const [salt, storedHash] = checkUser.hashedPassword.split('.');
 
-        if (!isMatch) {
-            throw new ForbiddenException('Invalid credentials');
+        // Hash the password with the salt
+        const validatePassword = (await scrypt(password, salt, 64)) as Buffer;
+
+        // Compare the hashed password with the stored hash
+        if (storedHash !== validatePassword.toString('hex')) {
+            throw new ForbiddenException('Invalid Password');
         }
 
-        return {
-            user: user, //TODO: Remove this from here. It's not secure to return the user object. We can store that in the JWT payload.
-            token: await this.signToken(
-                user.id,
-                user.email,
-                user.role,
-            ),
-        };
+        // Check if user and hashed password match
+        if (checkUser && storedHash == validatePassword.toString('hex')) {
+            const token = await this.createToken(
+                checkUser.id,
+                checkUser.email,
+                checkUser.role,
+            );
+
+            return {
+                auth_token: token,
+            };
+        }
     }
 
-    async signToken(userId: string, email: string, role: string): Promise<{ access_token: string; }> {
+    // JWT Methods:
+    async validateUserJwt(payload: JwtPayload): Promise<Partial<User> | undefined> {
+        const user = await this.findOneById(payload.userId);
+
+        if (!user) {
+            throw new NotFoundException('User not Found');
+        }
+
+        const { hashedPassword, ...result } = user;
+        return result
+    }
+
+    async createToken(userId: string, email: string, role: string): Promise<string> {
         // Create JWT
         const payload = {
-            sub: userId,
+            userId: userId,
             email: email,
             role: role,
         };
 
-        const secret = this.config.get('JWT_SECRET_KEY');
-        const expirationTime = this.config.get('JWT_EXPIRATION_TIME');
+        const jwtToken = await this.jwtService.signAsync(payload);
 
-        const jwtToken = await this.jwtService.signAsync(payload, {
-            secret: secret,
-            expiresIn: expirationTime,
-        });
-
-        return {
-            access_token: jwtToken,
-        }
+        return jwtToken
     }
-    
+
 }

@@ -1,6 +1,8 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import { Body, Controller, Post, Request, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LocalAuthDto, LocalSignInDto } from './dto';
+import { LocalAuthDto } from './dto';
+import { Login, SignUp } from './entities';
+import { LocalAuthGuard } from './guards';
 import {
     ApiOperation,
     ApiResponse,
@@ -15,27 +17,28 @@ import {
 export class AuthController {
     constructor(
         private readonly authService: AuthService,
-    ) {}
+    ) { }
 
-    @Post('/local/sign-up')
     @ApiOperation({ summary: 'Create User Using the Local Strategy' })
     @ApiResponse({
         status: 201,
         description: 'New User Created',
-        type: LocalAuthDto,
+        type: SignUp,
     })
-    async createUserLocally(@Body() body: LocalAuthDto) {
-        return await this.authService.signUpLocally(body);
+    @Post('/local/signup')
+    async signUpLocally(@Body() signUpDto: LocalAuthDto) {
+        return await this.authService.signUpLocally(signUpDto);
     }
 
-    @Post('/local/sign-in')
     @ApiOperation({ summary: 'Sign In Using the Local Strategy' })
     @ApiResponse({
         status: 201,
         description: 'User Signed In',
-        type: LocalAuthDto,
+        type: Login,
     })
-    async signInLocally(@Body() body: LocalSignInDto) {
-        return await this.authService.signInLocally(body);
+    @UseGuards(LocalAuthGuard)
+    @Post('/local/login')
+    async signInLocally(@Request() req) {
+        return req.user;
     }
 }
