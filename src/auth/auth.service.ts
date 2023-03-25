@@ -6,14 +6,12 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { LocalAuthDto } from './dto';
-import { randomBytes, scrypt as _scrypt } from 'crypto';
-import { promisify } from 'util';
+import { LocalSignInDto, LocalAuthDto } from './dto';
 import { User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtPayload } from './interface';
-
-const scrypt = promisify(_scrypt);
+import * as argon2 from 'argon2';
+import { Tokens } from './types';
 
 @Injectable()
 export class AuthService {
@@ -38,13 +36,13 @@ export class AuthService {
     }
 
     async findOneById(id: string): Promise<User | undefined> {
-        return await this.prisma.user.findFirst({
+        return await this.prisma.user.findUnique({
             where: { id },
         });
     }
 
     async findOneByEmail(email: string): Promise<User | undefined> {
-        return await this.prisma.user.findFirst({
+        return await this.prisma.user.findUnique({
             where: { email },
         });
     }
@@ -52,32 +50,43 @@ export class AuthService {
 
     // Local Login & SignUp Methods:
 
-    async signUpLocally(localAuthDto: LocalAuthDto): Promise<{ access_token: string }> {
+    async signUpLocally(localAuthDto: LocalAuthDto): Promise<Tokens> {
         // Hash password
-        const salt = randomBytes(10).toString('hex');
-
-        const buf = (await scrypt(localAuthDto.password, salt, 64)) as Buffer;
-
-        // Join the hashed password and salt together
-        const securePassword = `${salt}.${buf.toString('hex')}`;
+        const securePassword = await argon2.hash(localAuthDto.password);
 
         // Create User:
         try {
-            const user = await this.createUser({
+            // Create User:
+            const newUser = await this.createUser({
                 email: localAuthDto.email,
                 firstName: localAuthDto.firstName,
                 lastName: localAuthDto.lastName,
                 password: securePassword,
             });
-            const jwtToken = await this.createToken(
-                user.id,
-                user.email,
-                user.role,
-            );
 
-            return {
-                access_token: jwtToken,
-            };
+            // Create Tokens:
+            const tokens = await this.getTokens(
+                newUser.id,
+                newUser.email,
+                newUser.role,
+            )
+            // Create Account:
+            const newAccount = await this.prisma.account.create({
+                data: {
+                    userId: newUser.id,
+                    providerType: 'email',
+                    provider: 'local',
+                    providerAccountId: newUser.email,
+                    accessToken: tokens.accessToken,
+                    accessTokenExpires: 60 * 15,
+                    tokenType: 'Bearer',
+                }
+            });
+
+            await this.updateRefreshTokenHashLocal(newUser.id, tokens.refreshToken);
+
+            return tokens;
+
         } catch (err) {
             if (err.code === 'P2002') {
                 throw new BadRequestException('Email already exists');
@@ -86,36 +95,75 @@ export class AuthService {
         }
     }
 
-    async logInLocally(email: string, password: string): Promise<{ auth_token: string }> {
-        // Check if user email exists
-        const checkUser = await this.findOneByEmail(email);
+    async signInLocally(dto: LocalSignInDto): Promise<Tokens | undefined> {
+        const user = await this.findOneByEmail(dto.email);
 
-        if (!checkUser) {
+        if (!user) {
             throw new NotFoundException('User not Found');
         }
 
-        // Split the hashed password and salt
-        const [salt, storedHash] = checkUser.hashedPassword.split('.');
-
-        // Hash the password with the salt
-        const validatePassword = (await scrypt(password, salt, 64)) as Buffer;
-
-        // Compare the hashed password with the stored hash
-        if (storedHash !== validatePassword.toString('hex')) {
+        try {
+            if (await argon2.verify(user.hashedPassword, dto.password)) {
+                const tokens = await this.getTokens(user.id, user.email, user.role);
+                await this.updateRefreshTokenHashLocal(user.id, tokens.refreshToken);
+                return tokens;
+            }
             throw new ForbiddenException('Invalid Password');
+        } catch (err) {
+            throw err;
+        }
+    }
+
+    async updateRefreshTokenHashLocal(userId: string, refreshToken: string) {
+        const hash = await argon2.hash(refreshToken);
+        const account = await this.prisma.account.findFirst({
+            where: { userId, provider: 'local', providerType: 'email' },
+        })
+
+        if (!account) {
+            throw new NotFoundException('Account not Found');
         }
 
-        // Check if user and hashed password match
-        if (checkUser && storedHash == validatePassword.toString('hex')) {
-            const token = await this.createToken(
-                checkUser.id,
-                checkUser.email,
-                checkUser.role,
-            );
+        await this.prisma.account.update({
+            where: { id: account.id },
+            data: { refreshToken: hash },
+        })
+    }
 
-            return {
-                auth_token: token,
-            };
+    async localLogout(userId: string) {
+        await this.prisma.account.updateMany({
+            where: {
+                userId,
+                refreshToken: {
+                    not: null,
+                },
+            },
+            data: {
+                refreshToken: null,
+            }
+        })
+    }
+
+    async refreshToken(userId: string, refreshToken: string) {
+        const user = await this.findOneById(userId);
+        const account = await this.prisma.account.findFirst({
+            where: { userId: userId, provider: 'local', providerType: 'email' },
+        })
+
+        if (!account || !user) {
+            throw new NotFoundException('User not Found');
+        }
+
+        try {
+            if (await argon2.verify(account.refreshToken, refreshToken)) {
+                const tokens = await this.getTokens(user.id, user.email, user.role);
+                await this.updateRefreshTokenHashLocal(user.id, tokens.refreshToken);
+                return tokens;
+            } else {
+                throw new ForbiddenException('Invalid Refresh Token');
+            }
+        } catch (err) {
+            throw err;
         }
     }
 
@@ -142,6 +190,35 @@ export class AuthService {
         const jwtToken = await this.jwtService.signAsync(payload);
 
         return jwtToken
+    }
+
+    async getTokens(userId: string, email: string, role: string): Promise<Tokens> {
+        const [at, rt] = await Promise.all([
+            this.jwtService.signAsync({
+                    userId: userId,
+                    email: email,
+                    role: role,
+                }, {
+                    secret: this.config.get('AT_JWT_SECRET_KEY'),
+                    expiresIn: 60 * 15, // 15 minutes
+                }
+            ),
+            this.jwtService.signAsync({
+                    userId: userId,
+                    email: email,
+                    role: role,
+                }, {
+                    secret: this.config.get('RT_JWT_SECRET_KEY'),
+                    expiresIn: 60 * 60 * 24 * 7, // 7 days
+                }
+            ),
+        ]);
+
+        return {
+            accessToken: at,
+            refreshToken: rt,
+        }
+        
     }
 
 }

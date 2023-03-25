@@ -8,6 +8,7 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { Public } from '../common/decorators';
 
 @ApiTags('Users')
 @Controller({
@@ -23,6 +24,7 @@ export class UsersController {
     description: 'All users',
     type: [CreateUserDto],
   })
+  @Public()
   @Get()
   findAll() {
     return this.usersService.findAll();
@@ -34,7 +36,7 @@ export class UsersController {
     description: 'User found',
     type: CreateUserDto,
   })
-  @UseGuards(JwtAuthGuard)
+  @Public()
   @Get(':id')
   async findOneById(@Param('id') id: string) {
     const user = await this.usersService.findOneById(id);
@@ -56,7 +58,7 @@ export class UsersController {
     description: 'User found',
     type: CreateUserDto,
   })
-  @UseGuards(JwtAuthGuard)
+  @Public()
   @Get('/email/:email')
   async findOneByEmail(@Param('email') email: string) {
     const user = await this.usersService.findOneByEmail(email);
@@ -78,6 +80,7 @@ export class UsersController {
     description: 'User updated',
     type: UpdateUserDto,
   })
+  @Public()
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(id, updateUserDto);
@@ -89,6 +92,7 @@ export class UsersController {
     description: 'User deleted',
     type: String,
   })
+  @Public()
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.usersService.remove(id);

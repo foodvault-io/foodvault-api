@@ -1,4 +1,4 @@
-import { NestFactory, HttpAdapterHost } from '@nestjs/core';
+import { NestFactory, HttpAdapterHost, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { PrismaClientExceptionFilter } from './prisma-client-exception/prisma-client-exception.filter';
@@ -7,6 +7,7 @@ import {
   DocumentBuilder,
   SwaggerDocumentOptions,
 } from '@nestjs/swagger';
+import { AtJwtGuard } from './common/guards';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -25,6 +26,10 @@ async function bootstrap() {
   // Enable Global validation
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));
 
+  // Enable global authentication
+  const reflector = app.get(Reflector);
+  app.useGlobalGuards(new AtJwtGuard(reflector));
+  
   // Enable global exception filter
   const { httpAdapter } = app.get(HttpAdapterHost);
   app.useGlobalFilters(new PrismaClientExceptionFilter(httpAdapter));

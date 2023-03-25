@@ -38,7 +38,7 @@
     "@nestjs/jwt": "^10.0.2",
     "@nestjs/passport": "^9.0.3",
     "@nestjs/platform-express": "^9.0.0",
-    "bcryptjs": "^2.4.3",
+    "argon2": "^0.30.3",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.0",
     "jest-junit": "^15.0.0",
@@ -123,9 +123,9 @@
     ],
     "coverageReporters": [
       "json",
+      "text",
       "json-summary",
       "lcov",
-      "text",
       "clover",
       "cobertura"
     ]
