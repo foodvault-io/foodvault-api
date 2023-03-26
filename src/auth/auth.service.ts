@@ -9,9 +9,8 @@ import { ConfigService } from '@nestjs/config';
 import { LocalSignInDto, LocalAuthDto } from './dto';
 import { User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { JwtPayload } from './interface';
 import * as argon2 from 'argon2';
-import { Tokens } from './types';
+import { Token, Tokens } from './types';
 
 @Injectable()
 export class AuthService {
@@ -129,7 +128,6 @@ export class AuthService {
             data: { refreshToken: hash },
         })
     }
-
     async localLogout(userId: string) {
         await this.prisma.account.updateMany({
             where: {
@@ -144,7 +142,7 @@ export class AuthService {
         })
     }
 
-    async refreshToken(userId: string, refreshToken: string) {
+    async refreshToken(userId: string, refreshToken: string): Promise<Token> {
         const user = await this.findOneById(userId);
         const account = await this.prisma.account.findFirst({
             where: { userId: userId, provider: 'local', providerType: 'email' },
@@ -156,40 +154,14 @@ export class AuthService {
 
         try {
             if (await argon2.verify(account.refreshToken, refreshToken)) {
-                const tokens = await this.getTokens(user.id, user.email, user.role);
-                await this.updateRefreshTokenHashLocal(user.id, tokens.refreshToken);
-                return tokens;
+                const token = await this.getAccessToken(user.id, user.email, user.role);
+                return token;
             } else {
                 throw new ForbiddenException('Invalid Refresh Token');
             }
         } catch (err) {
             throw err;
         }
-    }
-
-    // JWT Methods:
-    async validateUserJwt(payload: JwtPayload): Promise<Partial<User> | undefined> {
-        const user = await this.findOneById(payload.userId);
-
-        if (!user) {
-            throw new NotFoundException('User not Found');
-        }
-
-        const { hashedPassword, ...result } = user;
-        return result
-    }
-
-    async createToken(userId: string, email: string, role: string): Promise<string> {
-        // Create JWT
-        const payload = {
-            userId: userId,
-            email: email,
-            role: role,
-        };
-
-        const jwtToken = await this.jwtService.signAsync(payload);
-
-        return jwtToken
     }
 
     async getTokens(userId: string, email: string, role: string): Promise<Tokens> {
@@ -219,6 +191,22 @@ export class AuthService {
             refreshToken: rt,
         }
         
+    }
+
+    async getAccessToken(userId: string, email: string, role: string): Promise<Token> {
+        const at = await this.jwtService.signAsync({
+                userId: userId,
+                email: email,
+                role: role,
+            }, {
+                secret: this.config.get('AT_JWT_SECRET_KEY'),
+                expiresIn: 60 * 15, // 15 minutes
+            }
+        )
+
+        return {
+            accessToken: at
+        }
     }
 
 }

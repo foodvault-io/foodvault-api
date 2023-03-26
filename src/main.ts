@@ -21,7 +21,10 @@ async function bootstrap() {
   })
 
   // Enable CORS
-  app.enableCors();
+  app.enableCors({
+    // setup allowed urls to call api
+    origin: ['http://192.168.1.125:19000']
+  });
 
   // Enable Global validation
   app.useGlobalPipes(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true }));

@@ -8,8 +8,10 @@ import {
     ApiTags,
 } from '@nestjs/swagger';
 import { Tokens } from './types';
-import { RtJwtGuard } from 'src/common/guards';
-import { GetCurrentUser, GetCurrentUserId, Public } from 'src/common/decorators';
+import { RtJwtGuard } from '../common/guards';
+import { GetCurrentUser, GetCurrentUserId, Public } from '../common/decorators';
+import { Logger } from '@nestjs/common';
+
 
 @ApiTags('Auth')
 @Controller({
@@ -17,6 +19,8 @@ import { GetCurrentUser, GetCurrentUserId, Public } from 'src/common/decorators'
     version: '1',
 })
 export class AuthController {
+    log = new Logger('AuthController');
+
     constructor(
         private readonly authService: AuthService,
     ) { }
