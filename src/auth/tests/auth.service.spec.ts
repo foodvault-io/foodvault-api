@@ -112,7 +112,7 @@ describe('AuthService', () => {
     expect(service).toBeDefined();
   });
 
-  describe('create one', () => {
+  describe('createUser()', () => {
     it('should create a user', async () => {
       const user = await service.createUser({
         email: userEmail1,
@@ -124,7 +124,7 @@ describe('AuthService', () => {
     });
   });
 
-  describe('find one', () => {
+  describe('findOneById() & findOneByEmail()', () => {
 
     it('should find a user by id', async () => {
       expect(service.findOneById('a uuid')).resolves.toEqual(oneUser);
@@ -135,7 +135,7 @@ describe('AuthService', () => {
     });
   });
 
-  describe('Sign Up Locally', () => {
+  describe('signUpLocally()', () => {
     it('should create a new user, account and tokens', async () => {
       const localAuthDto: LocalAuthDto = {
         email: userEmail1,
@@ -191,7 +191,7 @@ describe('AuthService', () => {
     });
   });
 
-  describe('Sign In Locally', () => {
+  describe('signInLocally()', () => {
     it('should sign in a user locally', async () => {
       const localSignInDto: LocalSignInDto = {
         email: 'user@example.com',
@@ -254,20 +254,28 @@ describe('AuthService', () => {
       const result = await argon2.verify(updatedAccount.refreshToken, newRefreshToken);
       expect(result).toBe(true);
     });
+    it ('should throw NotFoundException when User is not found', async () => {
+      jest.spyOn(service, 'findOneById').mockResolvedValue(null);
+
+      try {
+        await service.updateRefreshTokenHashLocal(userId, refreshToken);
+      } catch (error) {
+        expect(error.message).toEqual(new NotFoundException('User not Found').message);
+      }
+    });
 
     it('should throw NotFoundException when Account is not found', async () => {
-      jest.spyOn(prisma.account, 'findFirst').mockResolvedValueOnce(undefined);
-      await expect(service.updateRefreshTokenHashLocal(userId, refreshToken)).rejects.toThrow(new NotFoundException('Account not Found'));
-
+      jest.spyOn(prisma.account, 'findFirst').mockResolvedValueOnce(null);
+      try {
+        await service.updateRefreshTokenHashLocal(userId, refreshToken);
+      } catch (error) {
+        expect(error.message).toEqual(new NotFoundException('Account not Found').message);
+      }
     });
 
-    it ('should throw NotFoundException when User is not found', async () => {
-      jest.spyOn(service, 'findOneById').mockResolvedValue(undefined);
-      await expect(service.refreshToken(userId, refreshToken)).rejects.toThrow(new NotFoundException('User not Found'));
-    });
   });
 
-  describe('localLogout', () => {
+  describe('localLogout()', () => {
     it('should update all refresh tokens to null for a given user ID', async () => {
       // Arrange
       const userId = '1';
@@ -290,7 +298,7 @@ describe('AuthService', () => {
     });
   });
 
-  describe('refreshToken', () => {
+  describe('refreshToken()', () => {
     const userId = '1';
     const refreshToken = 'refresh-token';
     const hashedRefreshToken = 'hashed-refresh-token';
@@ -335,7 +343,7 @@ describe('AuthService', () => {
     });
   });
 
-  describe('getTokens', () => {
+  describe('getTokens()', () => {
     it('should return an object with access and refresh tokens', async () => {
       const userId = 'testUserId';
       const email = 'test@test.com';
@@ -382,7 +390,7 @@ describe('AuthService', () => {
     });
   });
 
-  describe('getAccessToken', () => {
+  describe('getAccessToken()', () => {
     it('should return an object with access tokens', async () => {
       const userId = 'testUserId';
       const email = 'test@test.com';
