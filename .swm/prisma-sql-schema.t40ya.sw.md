@@ -2,7 +2,7 @@
 id: t40ya
 title: "Prisma SQL Schema "
 file_version: 1.1.2
-app_version: 1.4.7
+app_version: 1.5.0
 ---
 
 This document will highlight the different Prisma models and the relationship between them
@@ -114,37 +114,52 @@ This document will highlight the different Prisma models and the relationship be
 103    
 104      providerType String @default("local")
 105      provider String @default("local")
-106      providerAccountId String 
+106      providerAccountId String
 107    
 108      refreshToken String?
 109      accessToken String?
-110      accessTokenExpires Int?
+110      accessTokenExpires Int? // In minutes
 111      tokenType String?
-112      scope String?
-113      idToken String?
-114      sessionState String?
+112    
+113      @@unique([provider, providerAccountId])
+114    }
 115    
-116      @@unique([provider, providerAccountId])
-117    }
-118    
-119    model Session {
-120      id String @id @default(uuid()) 
-121      sessionToken String @unique 
-122      expires DateTime
-123    
-124      userId String
-125      user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-126    }
-127    
-128    model VerificationToken {
-129      identifier String 
-130      token String @unique
-131      expires DateTime
-132      createdAt DateTime @default(now())
-133      updatedAt DateTime @updatedAt
+116    model Session {
+117      id String @id @default(uuid()) 
+118      sessionToken String @unique 
+119      expires DateTime
+120    
+121      userId String
+122      user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+123    }
+124    
+125    model VerificationToken {
+126      identifier String 
+127      token String @unique
+128      expires DateTime
+129      createdAt DateTime @default(now())
+130      updatedAt DateTime @updatedAt
+131    
+132      @@unique([identifier, token])
+133    }
 134    
-135      @@unique([identifier, token])
-136    }
+135    // Kitchen Models: Kitchen Details, Kitchen Equipment, Kitchen Amenities, Kitchen Time Slots
+136    
+137    enum KitchenStatus {
+138      ACTIVE @map("active")
+139      INACTIVE @map("inactive")
+140      PENDING @map("pending")
+141      REJECTED @map("rejected")
+142      SUSPENDED @map("suspended")
+143    }
+144    
+145    model KitchenDetails {
+146      // Kitchen Details
+147      id String @id @default(uuid())
+148      createdAt DateTime @default(now())
+149      updatedAt DateTime @updatedAt
+150      deletedAt DateTime?
+151    
 ```
 
 <br/>
@@ -157,80 +172,80 @@ This document will highlight the different Prisma models and the relationship be
 <!-- NOTE-swimm-snippet: the lines below link your snippet to Swimm -->
 ### 📄 prisma/schema.prisma
 ```prisma
-148    model KitchenDetails {
-149      // Kitchen Details
-150      id String @id @default(uuid())
-151      createdAt DateTime @default(now())
-152      updatedAt DateTime @updatedAt
-153      deletedAt DateTime?
-154    
-155      // Kitchen Details
-156      name String @unique
-157      description String
-158      phone String
-159      website String?
-160      status KitchenStatus @default(PENDING) 
-161    
-162      // Time Slots
-163      timeSlots TimeSlot[]
-164      totalCreditsReceived Int @default(0) // Total Credits Received from Chefs for Bookings
+145    model KitchenDetails {
+146      // Kitchen Details
+147      id String @id @default(uuid())
+148      createdAt DateTime @default(now())
+149      updatedAt DateTime @updatedAt
+150      deletedAt DateTime?
+151    
+152      // Kitchen Details
+153      name String @unique
+154      description String
+155      phone String
+156      website String?
+157      status KitchenStatus @default(PENDING) 
+158    
+159      // Time Slots
+160      timeSlots TimeSlot[]
+161      totalCreditsReceived Int @default(0) // Total Credits Received from Chefs for Bookings
+162    
+163      // Location Data
+164      address String
 165    
-166      // Location Data
-167      address String
+166      cityId String
+167      city City @relation(fields: [cityId], references: [id])
 168    
-169      cityId String
-170      city City @relation(fields: [cityId], references: [id])
+169      stateId String
+170      state State @relation(fields: [stateId], references: [id])
 171    
-172      stateId String
-173      state State @relation(fields: [stateId], references: [id])
+172      countryId String
+173      country Country @relation(fields: [countryId], references: [id])
 174    
-175      countryId String
-176      country Country @relation(fields: [countryId], references: [id])
-177    
-178      zip String
-179      lat String?
-180      lon String?
+175      zip String
+176      lat String?
+177      lon String?
+178    
+179      // Kitchen Certificates & identification
+180      certificates Certificates[]
 181    
-182      // Kitchen Certificates & identification
-183      certificates Certificates[]
+182      // Chefs Allowed in Kitchen
+183      chefsAllowed Int?
 184    
-185      // Chefs Allowed in Kitchen
-186      chefsAllowed Int?
-187    
-188      // Kitchen Reviews
-189      kitchenReviews KitchenReviews[]
-190      
-191      // Kitchen Owner 
-192      ownerId String @unique
-193      kitchenOwner KitchenUser @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+185      // Kitchen Reviews
+186      kitchenReviews KitchenReviews[]
+187      
+188      // Kitchen Owner 
+189      ownerId String @unique
+190      kitchenOwner KitchenUser @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+191    
+192      equipmentList KitchenEquipment?
+193      additionalEquipment String?
 194    
-195      equipmentList KitchenEquipment?
-196      additionalEquipment String?
+195      kitchenMedia Media[]
+196    }
 197    
-198      kitchenMedia Media[]
-199    }
-200    
-201    model KitchenEquipment {
-202      id String @id @default(uuid())
-203      createdAt DateTime @default(now())
-204      updatedAt DateTime @updatedAt
-205      deletedAt DateTime?
-206    
-207      amenities KitchenAmenities[]
-208    
-209      kitchenDetailsId String @unique
-210      kitchenDetails KitchenDetails @relation(fields: [kitchenDetailsId], references: [id], onDelete: Cascade)
-211    }
-212    
-213    model KitchenAmenities{
-214      id String @id @default(uuid())
-215      name String
-216      iconImage String?
-217      status String?
-218      required Boolean @default(false)
-219    
-220      kitchenEquipment KitchenEquipment[]
-221    }
+198    model KitchenEquipment {
+199      id String @id @default(uuid())
+200      createdAt DateTime @default(now())
+201      updatedAt DateTime @updatedAt
+202      deletedAt DateTime?
+203    
+204      amenities KitchenAmenities[]
+205    
+206      kitchenDetailsId String @unique
+207      kitchenDetails KitchenDetails @relation(fields: [kitchenDetailsId], references: [id], onDelete: Cascade)
+208    }
+209    
+210    model KitchenAmenities{
+211      id String @id @default(uuid())
+212      name String
+213      iconImage String?
+214      status String?
+215      required Boolean @default(false)
+216    
+217      kitchenEquipment KitchenEquipment[]
+218    }
 ```
 
 <br/>
@@ -243,53 +258,53 @@ This document will highlight the different Prisma models and the relationship be
 <!-- NOTE-swimm-snippet: the lines below link your snippet to Swimm -->
 ### 📄 prisma/schema.prisma
 ```prisma
-232    model ChefCompanyDetails {
-233      id String @id @default(uuid())
-234      createdAt DateTime @default(now())
-235      updatedAt DateTime @updatedAt
-236      deletedAt DateTime?
-237      name String
-238      description String
-239      phone String
-240      website String?
-241      status ChefStatus @default(PENDING)
+229    model ChefCompanyDetails {
+230      id String @id @default(uuid())
+231      createdAt DateTime @default(now())
+232      updatedAt DateTime @updatedAt
+233      deletedAt DateTime?
+234      name String
+235      description String
+236      phone String
+237      website String?
+238      status ChefStatus @default(PENDING)
+239    
+240      // Time Slots Selected
+241      timeSlots TimeSlot[]
 242    
-243      // Time Slots Selected
-244      timeSlots TimeSlot[]
+243      // Location Data
+244      address String
 245    
-246      // Location Data
-247      address String
+246      cityId String
+247      city City @relation(fields: [cityId], references: [id])
 248    
-249      cityId String
-250      city City @relation(fields: [cityId], references: [id])
+249      stateId String
+250      state State @relation(fields: [stateId], references: [id])
 251    
-252      stateId String
-253      state State @relation(fields: [stateId], references: [id])
+252      countryId String
+253      country Country @relation(fields: [countryId], references: [id])
 254    
-255      countryId String
-256      country Country @relation(fields: [countryId], references: [id])
-257    
-258      zip String
-259      lat String?
-260      lon String?
+255      zip String
+256      lat String?
+257      lon String?
+258    
+259      // Chefs Allowed in Kitchen
+260      kitchensAllowed Int?
 261    
-262      // Chefs Allowed in Kitchen
-263      kitchensAllowed Int?
+262      // Chef Reviews
+263      chefReviews ChefReviews[]
 264    
-265      // Chef Reviews
-266      chefReviews ChefReviews[]
+265      // Kitchen Reviews
+266      kitchenReviews KitchenReviews[]
 267    
-268      // Kitchen Reviews
-269      kitchenReviews KitchenReviews[]
-270    
-271      // Chef Owner 
-272      ownerId String 
-273      chefOwner ChefUser @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-274    
-275      chefMedia Media[]
-276    
-277      chefEquipment ChefEquipment?
-278    }
+268      // Chef Owner 
+269      ownerId String 
+270      chefOwner ChefUser @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+271    
+272      chefMedia Media[]
+273    
+274      chefEquipment ChefEquipment?
+275    }
 ```
 
 <br/>
@@ -302,44 +317,44 @@ This document will highlight the different Prisma models and the relationship be
 <!-- NOTE-swimm-snippet: the lines below link your snippet to Swimm -->
 ### 📄 prisma/schema.prisma
 ```prisma
-304    model City {
-305      id String @id @default(uuid())
-306      name String
-307      status String
+301    model City {
+302      id String @id @default(uuid())
+303      name String
+304      status String
+305    
+306      stateId String
+307      state State @relation(fields: [stateId], references: [id], onDelete: Cascade)
 308    
-309      stateId String
-310      state State @relation(fields: [stateId], references: [id], onDelete: Cascade)
-311    
-312      kitchenDetails KitchenDetails[]
-313      chefDetails ChefCompanyDetails[]
-314    }
-315    
-316    model State {
-317      id String @id @default(uuid())
-318      name String
-319      code String
-320      status String
-321    
-322      city City[]
+309      kitchenDetails KitchenDetails[]
+310      chefDetails ChefCompanyDetails[]
+311    }
+312    
+313    model State {
+314      id String @id @default(uuid())
+315      name String
+316      code String
+317      status String
+318    
+319      city City[]
+320    
+321      countryId String
+322      country Country @relation(fields: [countryId], references: [id], onDelete: Cascade)
 323    
-324      countryId String
-325      country Country @relation(fields: [countryId], references: [id], onDelete: Cascade)
-326    
-327      kitchenDetails KitchenDetails[]
-328      chefDetails ChefCompanyDetails[]
-329    }
-330    
-331    model Country {
-332      id String @id @default(uuid())
-333      name String
-334      code String
-335      status String
-336    
-337      state State[]
-338    
-339      kitchenDetails KitchenDetails[]
-340      chefDetails ChefCompanyDetails[]
-341    }
+324      kitchenDetails KitchenDetails[]
+325      chefDetails ChefCompanyDetails[]
+326    }
+327    
+328    model Country {
+329      id String @id @default(uuid())
+330      name String
+331      code String
+332      status String
+333    
+334      state State[]
+335    
+336      kitchenDetails KitchenDetails[]
+337      chefDetails ChefCompanyDetails[]
+338    }
 ```
 
 <br/>
@@ -352,38 +367,37 @@ This document will highlight the different Prisma models and the relationship be
 <!-- NOTE-swimm-snippet: the lines below link your snippet to Swimm -->
 ### 📄 prisma/schema.prisma
 ```prisma
-344    model KitchenReviews {
-345      id String @id @default(uuid())
-346      createdAt DateTime @default(now())
-347      updatedAt DateTime @updatedAt
-348      deletedAt DateTime?
+341    model KitchenReviews {
+342      id String @id @default(uuid())
+343      createdAt DateTime @default(now())
+344      updatedAt DateTime @updatedAt
+345      deletedAt DateTime?
+346    
+347      review String
+348      rating Int
 349    
-350      review String
-351      rating Int
+350      kitchenDetailsId String
+351      kitchenDetails KitchenDetails @relation(fields: [kitchenDetailsId], references: [id], onDelete: Cascade)
 352    
-353      kitchenDetailsId String
-354      kitchenDetails KitchenDetails @relation(fields: [kitchenDetailsId], references: [id], onDelete: Cascade)
-355    
-356      chefId String
-357      chef ChefCompanyDetails @relation(fields: [chefId], references: [id], onDelete: Cascade)
-358    }
-359    
-360    model ChefReviews {
-361      id String @id @default(uuid())
-362      createdAt DateTime @default(now())
-363      updatedAt DateTime @updatedAt
-364      deletedAt DateTime?
+353      chefId String
+354      chef ChefCompanyDetails @relation(fields: [chefId], references: [id], onDelete: Cascade)
+355    }
+356    
+357    model ChefReviews {
+358      id String @id @default(uuid())
+359      createdAt DateTime @default(now())
+360      updatedAt DateTime @updatedAt
+361      deletedAt DateTime?
+362    
+363      review String
+364      rating Int
 365    
-366      review String
-367      rating Int
+366      chefDetailsId String
+367      chef ChefCompanyDetails @relation(fields: [chefDetailsId], references: [id], onDelete: Cascade)
 368    
-369      chefDetailsId String
-370      chef ChefCompanyDetails @relation(fields: [chefDetailsId], references: [id], onDelete: Cascade)
-371    
-372      kitchenUserId String
-373      kitchenUser KitchenUser @relation(fields: [kitchenUserId], references: [id], onDelete: Cascade)
-374    }
-375    
+369      kitchenUserId String
+370      kitchenUser KitchenUser @relation(fields: [kitchenUserId], references: [id], onDelete: Cascade)
+371    }
 ```
 
 <br/>
@@ -396,40 +410,40 @@ This document will highlight the different Prisma models and the relationship be
 <!-- NOTE-swimm-snippet: the lines below link your snippet to Swimm -->
 ### 📄 prisma/schema.prisma
 ```prisma
-377    // Media Models: Certificates, Media, etc.
-378    model Certificates {
-379      id String @id @default(uuid())
-380      createdAt DateTime @default(now())
-381      updatedAt DateTime @updatedAt
-382      deletedAt DateTime?
-383      fileName String
-384      fileSize BigInt 
-385      fileUrl String
-386      fileType String
+374    // Media Models: Certificates, Media, etc.
+375    model Certificates {
+376      id String @id @default(uuid())
+377      createdAt DateTime @default(now())
+378      updatedAt DateTime @updatedAt
+379      deletedAt DateTime?
+380      fileName String
+381      fileSize BigInt 
+382      fileUrl String
+383      fileType String
+384    
+385      kitchenDetailsId String?
+386      kitchenDetails KitchenDetails? @relation(fields: [kitchenDetailsId], references: [id], onDelete: Cascade)
 387    
-388      kitchenDetailsId String?
-389      kitchenDetails KitchenDetails? @relation(fields: [kitchenDetailsId], references: [id], onDelete: Cascade)
-390    
-391      chefDetailsId String?
-392      chefDetails ChefUser? @relation(fields: [chefDetailsId], references: [id], onDelete: Cascade)
-393    }
-394    
-395    model Media {
-396      id String @id @default(uuid())
-397      createdAt DateTime @default(now())
-398      updatedAt DateTime @updatedAt
-399      deletedAt DateTime?
-400      fileName String
-401      fileSize BigInt 
-402      fileUrl String
-403      fileType String
+388      chefDetailsId String?
+389      chefDetails ChefUser? @relation(fields: [chefDetailsId], references: [id], onDelete: Cascade)
+390    }
+391    
+392    model Media {
+393      id String @id @default(uuid())
+394      createdAt DateTime @default(now())
+395      updatedAt DateTime @updatedAt
+396      deletedAt DateTime?
+397      fileName String
+398      fileSize BigInt 
+399      fileUrl String
+400      fileType String
+401    
+402      kitchenDetailsId String?
+403      kitchenDetails KitchenDetails? @relation(fields: [kitchenDetailsId], references: [id], onDelete: Cascade)
 404    
-405      kitchenDetailsId String?
-406      kitchenDetails KitchenDetails? @relation(fields: [kitchenDetailsId], references: [id], onDelete: Cascade)
-407    
-408      chefDetailsId String?
-409      chefDetails ChefCompanyDetails? @relation(fields: [chefDetailsId], references: [id], onDelete: Cascade)
-410    }
+405      chefDetailsId String?
+406      chefDetails ChefCompanyDetails? @relation(fields: [chefDetailsId], references: [id], onDelete: Cascade)
+407    }
 ```
 
 <br/>
@@ -442,48 +456,48 @@ This document will highlight the different Prisma models and the relationship be
 <!-- NOTE-swimm-snippet: the lines below link your snippet to Swimm -->
 ### 📄 prisma/schema.prisma
 ```prisma
-421    // Create model of a time slot
-422    model TimeSlot {
-423      id String @id @default(uuid())
-424      createdAt DateTime @default(now())
-425      updatedAt DateTime @updatedAt
-426      deletedAt DateTime?
-427    
-428      // Cost Details
-429      creditCost Int
-430      creditPaid Int?
-431      isPaid Boolean @default(false)
-432      isRefunded Boolean @default(false)
-433      refundReason String?
-434      refundDate DateTime?
-435      refundAmount Int?
-436    
-437      // Time Slot Details
-438      timeSlotDate DateTime
-439      startTime DateTime
-440      endTime DateTime
-441      timeSlotDuration Int
-442      timeSlotType String?
-443      timeSlotNotes String?
-444      timeSlotStatus TimeSlotStatus @default(AVAILABLE)
-445    
-446      timeZone String?
-447      canceledDate DateTime?
-448      rejectedDate DateTime?
-449      cancelationReasons String?
-450      rejectionReason String?
-451    
-452      // Chef Selecting Time Slot
-453      chefId String?
-454      chef ChefCompanyDetails? @relation(fields: [chefId], references: [id])
+418    // Create model of a time slot
+419    model TimeSlot {
+420      id String @id @default(uuid())
+421      createdAt DateTime @default(now())
+422      updatedAt DateTime @updatedAt
+423      deletedAt DateTime?
+424    
+425      // Cost Details
+426      creditCost Int
+427      creditPaid Int?
+428      isPaid Boolean @default(false)
+429      isRefunded Boolean @default(false)
+430      refundReason String?
+431      refundDate DateTime?
+432      refundAmount Int?
+433    
+434      // Time Slot Details
+435      timeSlotDate DateTime
+436      startTime DateTime
+437      endTime DateTime
+438      timeSlotDuration Int
+439      timeSlotType String?
+440      timeSlotNotes String?
+441      timeSlotStatus TimeSlotStatus @default(AVAILABLE)
+442    
+443      timeZone String?
+444      canceledDate DateTime?
+445      rejectedDate DateTime?
+446      cancelationReasons String?
+447      rejectionReason String?
+448    
+449      // Chef Selecting Time Slot
+450      chefId String?
+451      chef ChefCompanyDetails? @relation(fields: [chefId], references: [id])
+452    
+453      chefsAttending Int
+454    
 455    
-456      chefsAttending Int
-457    
-458    
-459      // Time Slot Kitchen Details
-460      kitchenDetailsId String
-461      kitchenDetails KitchenDetails @relation(fields: [kitchenDetailsId], references: [id], onDelete: Cascade)
-462    }
+456      // Time Slot Kitchen Details
+457      kitchenDetailsId String
+458      kitchenDetails KitchenDetails @relation(fields: [kitchenDetailsId], references: [id], onDelete: Cascade)
+459    }
 ```
 
 <br/>
@@ -496,43 +510,43 @@ This document will highlight the different Prisma models and the relationship be
 <!-- NOTE-swimm-snippet: the lines below link your snippet to Swimm -->
 ### 📄 prisma/schema.prisma
 ```prisma
-470    model CreditPackages {
-471      id String @id @default(uuid())
-472      createdAt DateTime @default(now())
-473      updatedAt DateTime @updatedAt
-474      deletedAt DateTime?
-475    
-476      name String
-477      description String
-478      creditsGranted Int
-479      pricePerCredit Decimal
-480      totalPrice Decimal
-481      status CreditStatus @default(ACTIVE)
+467    model CreditPackages {
+468      id String @id @default(uuid())
+469      createdAt DateTime @default(now())
+470      updatedAt DateTime @updatedAt
+471      deletedAt DateTime?
+472    
+473      name String
+474      description String
+475      creditsGranted Int
+476      pricePerCredit Decimal
+477      totalPrice Decimal
+478      status CreditStatus @default(ACTIVE)
+479    
+480      creditBought BoughtCredits[]
+481    }
 482    
-483      creditBought BoughtCredits[]
-484    }
-485    
-486    model BoughtCredits {
-487      id String @id @default(uuid())
-488      createdAt DateTime @default(now())
-489      updatedAt DateTime @updatedAt
-490      deletedAt DateTime?
+483    model BoughtCredits {
+484      id String @id @default(uuid())
+485      createdAt DateTime @default(now())
+486      updatedAt DateTime @updatedAt
+487      deletedAt DateTime?
+488    
+489      creditsBought Int
+490      transactoinId String @default(uuid())
 491    
-492      creditsBought Int
-493      transactoinId String @default(uuid())
-494    
-495      // Credit Package Details
-496      creditPackageId String
-497      creditPackage CreditPackages @relation(fields: [creditPackageId], references: [id], onDelete: Cascade)
-498    
-499      // Chef Details
-500      chefId String
-501      chef ChefUser @relation(fields: [chefId], references: [id], onDelete: Cascade)
-502    
-503      // Payment Details
-504      paymentId String
-505      payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
-506    }
+492      // Credit Package Details
+493      creditPackageId String
+494      creditPackage CreditPackages @relation(fields: [creditPackageId], references: [id], onDelete: Cascade)
+495    
+496      // Chef Details
+497      chefId String
+498      chef ChefUser @relation(fields: [chefId], references: [id], onDelete: Cascade)
+499    
+500      // Payment Details
+501      paymentId String
+502      payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+503    }
 ```
 
 <br/>
@@ -545,27 +559,27 @@ This document will highlight the different Prisma models and the relationship be
 <!-- NOTE-swimm-snippet: the lines below link your snippet to Swimm -->
 ### 📄 prisma/schema.prisma
 ```prisma
-508    model Payment {
-509      id String @id @default(uuid())
-510      createdAt DateTime @default(now())
-511      updatedAt DateTime @updatedAt
-512      deletedAt DateTime?
-513    
-514      // Payment Details
-515      paymentId String
-516      paymentMethod String
-517      paymentStatus String
-518      paymentAmount Decimal
-519      paymentCurrency String
-520      paymentDate DateTime
-521      paymentNotes String?
-522    
-523      // Payment Details
-524      chefId String
-525      chef ChefUser @relation(fields: [chefId], references: [id], onDelete: Cascade)
-526    
-527      creditsBought BoughtCredits[]
-528    }
+505    model Payment {
+506      id String @id @default(uuid())
+507      createdAt DateTime @default(now())
+508      updatedAt DateTime @updatedAt
+509      deletedAt DateTime?
+510    
+511      // Payment Details
+512      paymentId String
+513      paymentMethod String
+514      paymentStatus String
+515      paymentAmount Decimal
+516      paymentCurrency String
+517      paymentDate DateTime
+518      paymentNotes String?
+519    
+520      // Payment Details
+521      chefId String
+522      chef ChefUser @relation(fields: [chefId], references: [id], onDelete: Cascade)
+523    
+524      creditsBought BoughtCredits[]
+525    }
 ```
 
 <br/>
