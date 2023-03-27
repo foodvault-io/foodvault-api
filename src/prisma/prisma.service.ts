@@ -26,7 +26,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit {
 
     cleanDb() {
         return this.$transaction([
-            this.user.deleteMany(),
+            this.user.deleteMany({}),
+            this.account.deleteMany({}),
         ])
     }
 }

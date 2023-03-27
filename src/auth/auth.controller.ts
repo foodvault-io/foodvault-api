@@ -1,13 +1,17 @@
-import { Body, Controller, Post, Request, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards, Request } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LocalAuthDto } from './dto';
 import { Login, SignUp } from './entities';
-import { LocalAuthGuard } from './guards';
 import {
     ApiOperation,
     ApiResponse,
     ApiTags,
 } from '@nestjs/swagger';
+import { Tokens } from './types';
+import { RtJwtGuard, LocalAuthGuard } from '../common/guards';
+import { GetCurrentUser, GetCurrentUserId, Public } from '../common/decorators';
+import { Logger } from '@nestjs/common';
+
 
 @ApiTags('Auth')
 @Controller({
@@ -15,6 +19,8 @@ import {
     version: '1',
 })
 export class AuthController {
+    log = new Logger('AuthController');
+
     constructor(
         private readonly authService: AuthService,
     ) { }
@@ -25,8 +31,9 @@ export class AuthController {
         description: 'New User Created',
         type: SignUp,
     })
+    @Public()
     @Post('/local/signup')
-    async signUpLocally(@Body() signUpDto: LocalAuthDto) {
+    async signUpLocally(@Body() signUpDto: LocalAuthDto): Promise<Tokens> {
         return await this.authService.signUpLocally(signUpDto);
     }
 
@@ -36,9 +43,26 @@ export class AuthController {
         description: 'User Signed In',
         type: Login,
     })
+    @Public()
     @UseGuards(LocalAuthGuard)
     @Post('/local/login')
-    async signInLocally(@Request() req) {
+    signInLocally(@Request() req) {
         return req.user;
+    }
+
+
+    @Post('logout')
+    logout(@GetCurrentUserId() userId: string) {
+        return this.authService.localLogout(userId);
+    }
+
+    @Public()
+    @UseGuards(RtJwtGuard)
+    @Post('/refresh')
+    refreshToken(
+        @GetCurrentUserId() userId: string, 
+        @GetCurrentUser('refreshToken') refreshToken: string
+    ) {
+        return this.authService.refreshToken(userId, refreshToken)
     }
 }

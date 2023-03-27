@@ -103,15 +103,12 @@ model Account {
 
   providerType String @default("local")
   provider String @default("local")
-  providerAccountId String 
+  providerAccountId String
 
   refreshToken String?
   accessToken String?
-  accessTokenExpires Int?
+  accessTokenExpires Int? // In minutes
   tokenType String?
-  scope String?
-  idToken String?
-  sessionState String?
 
   @@unique([provider, providerAccountId])
 }

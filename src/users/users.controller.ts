@@ -1,13 +1,13 @@
-import { Controller, Get, Body, Patch, Param, Delete, NotFoundException, UseGuards } from '@nestjs/common';
+import { Controller, Get, Body, Patch, Param, Delete, NotFoundException } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { JwtAuthGuard } from '../auth/guards';
 import {
   ApiOperation,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { Public } from '../common/decorators';
 
 @ApiTags('Users')
 @Controller({
@@ -23,6 +23,7 @@ export class UsersController {
     description: 'All users',
     type: [CreateUserDto],
   })
+  @Public()
   @Get()
   findAll() {
     return this.usersService.findAll();
@@ -34,7 +35,6 @@ export class UsersController {
     description: 'User found',
     type: CreateUserDto,
   })
-  @UseGuards(JwtAuthGuard)
   @Get(':id')
   async findOneById(@Param('id') id: string) {
     const user = await this.usersService.findOneById(id);
@@ -56,7 +56,6 @@ export class UsersController {
     description: 'User found',
     type: CreateUserDto,
   })
-  @UseGuards(JwtAuthGuard)
   @Get('/email/:email')
   async findOneByEmail(@Param('email') email: string) {
     const user = await this.usersService.findOneByEmail(email);
@@ -78,6 +77,7 @@ export class UsersController {
     description: 'User updated',
     type: UpdateUserDto,
   })
+  @Public()
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
     return this.usersService.update(id, updateUserDto);
@@ -89,6 +89,7 @@ export class UsersController {
     description: 'User deleted',
     type: String,
   })
+  @Public()
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.usersService.remove(id);

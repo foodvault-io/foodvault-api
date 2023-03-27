@@ -2,7 +2,7 @@
 id: j021o
 title: Dev Environment Setup
 file_version: 1.1.2
-app_version: 1.4.6
+app_version: 1.5.0
 ---
 
 To run your local dev environment you will need a few things on your machine. Follow the steps below.
@@ -10,13 +10,12 @@ To run your local dev environment you will need a few things on your machine. Fo
 ## Installations
 
 *   Install [Node JS](https://nodejs.org/en/download/), version `18.x`
-    
+
 *   Install an IDE (preferably [VS Code](https://code.visualstudio.com/))
-    
+
 *   Install Git (if you don't already have it on your machine).
-    
+
 *   Install [NestJS CLI](https://docs.nestjs.com/) globally
-    
 
 ## Getting the sources
 
@@ -29,9 +28,8 @@ git clone https://github.com/foodvault-io/foodvault-api.git
 ## Start Server
 
 *   Within the repository directory, run `pnpm install` to install the project's dependencies.
-    
+
 *   Then, run the project by running `pnpm start:dev`.
-    
 
 ## Scripts worth mentioning ⚡️✨
 
@@ -60,11 +58,11 @@ Full list of scripts for this project:
 10         "prisma:dev:deploy": "prisma migrate deploy dev",
 11         "db:dev:rm": "docker compose rm db -s -f -v",
 12         "db:dev:up": "docker compose up db -d",
-13         "db:dev:restart": "pnpm run db:dev:rm && pnpm run db:dev:up && sleep 1 && npm run prisma:dev:deploy",
+13         "db:dev:restart": "pnpm run db:dev:rm && pnpm run db:dev:up && sleep 1 && pnpm run prisma:dev:deploy",
 14         "prisma:test:deploy": "dotenv -e .env.test -- prisma migrate deploy dev",
 15         "db:test:rm": "docker compose rm test-db -s -f -v",
 16         "db:test:up": "docker compose up test-db -d",
-17         "db:test:restart": "pnpm run db:test:rm && pnpm run db:test:up && sleep 1 && npm run prisma:test:deploy",
+17         "db:test:restart": "pnpm run db:test:rm && pnpm run db:test:up && sleep 1 && pnpm run prisma:test:deploy",
 18         "build": "nest build",
 19         "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
 20         "start": "nest start",
@@ -78,7 +76,7 @@ Full list of scripts for this project:
 28         "make-badges": "istanbul-badges-readme --logo='jest' --badge-style='plastic'",
 29         "make-badges:ci": "pnpm run make-badges -- --ci",
 30         "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-31         "test:e2e": "jest --config ./test/jest-e2e.json"
+31         "test:e2e": "pnpm run db:test:restart && dotenv -e .env.test -- jest --no-cache --watch --config ./test/jest-e2e.json"
 32       },
 ```
 
