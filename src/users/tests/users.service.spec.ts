@@ -141,7 +141,7 @@ describe('UsersService', () => {
         lastName: 'Doe',
       }
       const id = 'id';
-      const updateString = await service.update(id, updateUserDto);
+      const updateString = service.update(id, updateUserDto);
 
       expect(updateString).toEqual('This action updates a #id user');
     });
@@ -151,7 +151,7 @@ describe('UsersService', () => {
     it('should return a string', async () => {
       // arrange
       const id = 'id';
-      const deleteString = await service.remove(id);
+      const deleteString = service.remove(id);
 
       expect(deleteString).toEqual('This action removes a #id user');
     });

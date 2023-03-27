@@ -123,7 +123,7 @@ describe('UsersController', () => {
         firstName: 'Jane',
         lastName: 'Foster',
       };
-      const result = await controller.update(testUser.id, updateUserDto)
+      const result = controller.update(testUser.id, updateUserDto)
 
       expect(result).toEqual(`This action updates a #${testUser.id} user`)
     });
@@ -131,7 +131,7 @@ describe('UsersController', () => {
 
   describe('remove()', () => {
     it('should soft delete a user', async () => {
-      const result = await controller.remove(testUser.id);
+      const result = controller.remove(testUser.id);
       expect(result).toEqual(`This action removes a #${testUser.id} user`);
     });
   });
