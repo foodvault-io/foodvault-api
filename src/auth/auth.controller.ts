@@ -1,6 +1,6 @@
-import { Body, Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards, Request } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LocalAuthDto, LocalSignInDto } from './dto';
+import { LocalAuthDto } from './dto';
 import { Login, SignUp } from './entities';
 import {
     ApiOperation,
@@ -8,7 +8,7 @@ import {
     ApiTags,
 } from '@nestjs/swagger';
 import { Tokens } from './types';
-import { RtJwtGuard } from '../common/guards';
+import { RtJwtGuard, LocalAuthGuard } from '../common/guards';
 import { GetCurrentUser, GetCurrentUserId, Public } from '../common/decorators';
 import { Logger } from '@nestjs/common';
 
@@ -44,9 +44,10 @@ export class AuthController {
         type: Login,
     })
     @Public()
+    @UseGuards(LocalAuthGuard)
     @Post('/local/login')
-    signInLocally(@Body() loginDto: LocalSignInDto) {
-        return this.authService.signInLocally(loginDto);
+    signInLocally(@Request() req) {
+        return req.user;
     }
 
 

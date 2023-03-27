@@ -35,7 +35,6 @@ export class UsersController {
     description: 'User found',
     type: CreateUserDto,
   })
-  @Public()
   @Get(':id')
   async findOneById(@Param('id') id: string) {
     const user = await this.usersService.findOneById(id);
@@ -57,7 +56,6 @@ export class UsersController {
     description: 'User found',
     type: CreateUserDto,
   })
-  @Public()
   @Get('/email/:email')
   async findOneByEmail(@Param('email') email: string) {
     const user = await this.usersService.findOneByEmail(email);

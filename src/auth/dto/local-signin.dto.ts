@@ -1,4 +1,16 @@
-import { PartialType } from '@nestjs/swagger';
-import { LocalAuthDto } from './local-auth.dto';
+import {
+    IsNotEmpty,
+    IsString,
+    IsEmail,
+} from 'class-validator';
 
-export class LocalSignInDto extends PartialType(LocalAuthDto) { }
+export class LocalSignInDto  { 
+    @IsNotEmpty()
+    @IsString()
+    @IsEmail()
+    email: string;
+
+    @IsNotEmpty()
+    @IsString()
+    password: string;
+}

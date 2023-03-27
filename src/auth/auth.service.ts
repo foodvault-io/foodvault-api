@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '@nestjs/config';
-import { LocalSignInDto, LocalAuthDto } from './dto';
+import { LocalAuthDto } from './dto';
 import { User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import * as argon2 from 'argon2';
@@ -70,7 +70,7 @@ export class AuthService {
                 newUser.role,
             )
             // Create Account:
-            const newAccount = await this.prisma.account.create({
+            await this.prisma.account.create({
                 data: {
                     userId: newUser.id,
                     providerType: 'email',
@@ -94,15 +94,15 @@ export class AuthService {
         }
     }
 
-    async signInLocally(dto: LocalSignInDto): Promise<Tokens | undefined> {
-        const user = await this.findOneByEmail(dto.email);
+    async signInLocally(email: string, password: string): Promise<Tokens | undefined> {
+        const user = await this.findOneByEmail(email);
 
         if (!user) {
             throw new NotFoundException('User not Found');
         }
 
         try {
-            if (await argon2.verify(user.hashedPassword, dto.password)) {
+            if (await argon2.verify(user.hashedPassword, password)) {
                 const tokens = await this.getTokens(user.id, user.email, user.role);
                 await this.updateRefreshTokenHashLocal(user.id, tokens.refreshToken);
                 return tokens;
@@ -115,8 +115,14 @@ export class AuthService {
 
     async updateRefreshTokenHashLocal(userId: string, refreshToken: string) {
         const hash = await argon2.hash(refreshToken);
+        const user = await this.findOneById(userId);
+
+        if (!user) {
+            throw new NotFoundException('User not Found');
+        }
+        
         const account = await this.prisma.account.findFirst({
-            where: { userId, provider: 'local', providerType: 'email' },
+            where: { userId: userId, provider: 'local', providerAccountId: user.email },
         })
 
         if (!account) {
@@ -144,11 +150,15 @@ export class AuthService {
 
     async refreshToken(userId: string, refreshToken: string): Promise<Token> {
         const user = await this.findOneById(userId);
+
+        if (!user) {
+            throw new NotFoundException('User not Found');
+        }
         const account = await this.prisma.account.findFirst({
-            where: { userId: userId, provider: 'local', providerType: 'email' },
+            where: { userId: userId, provider: 'local', providerAccountId: user.email },
         })
 
-        if (!account || !user) {
+        if (!account) {
             throw new NotFoundException('User not Found');
         }
 
@@ -167,34 +177,6 @@ export class AuthService {
     async getTokens(userId: string, email: string, role: string): Promise<Tokens> {
         const [at, rt] = await Promise.all([
             this.jwtService.signAsync({
-                    userId: userId,
-                    email: email,
-                    role: role,
-                }, {
-                    secret: this.config.get('AT_JWT_SECRET_KEY'),
-                    expiresIn: 60 * 15, // 15 minutes
-                }
-            ),
-            this.jwtService.signAsync({
-                    userId: userId,
-                    email: email,
-                    role: role,
-                }, {
-                    secret: this.config.get('RT_JWT_SECRET_KEY'),
-                    expiresIn: 60 * 60 * 24 * 7, // 7 days
-                }
-            ),
-        ]);
-
-        return {
-            accessToken: at,
-            refreshToken: rt,
-        }
-        
-    }
-
-    async getAccessToken(userId: string, email: string, role: string): Promise<Token> {
-        const at = await this.jwtService.signAsync({
                 userId: userId,
                 email: email,
                 role: role,
@@ -202,6 +184,34 @@ export class AuthService {
                 secret: this.config.get('AT_JWT_SECRET_KEY'),
                 expiresIn: 60 * 15, // 15 minutes
             }
+            ),
+            this.jwtService.signAsync({
+                userId: userId,
+                email: email,
+                role: role,
+            }, {
+                secret: this.config.get('RT_JWT_SECRET_KEY'),
+                expiresIn: 60 * 60 * 24 * 7, // 7 days
+            }
+            ),
+        ]);
+
+        return {
+            accessToken: at,
+            refreshToken: rt,
+        }
+
+    }
+
+    async getAccessToken(userId: string, email: string, role: string): Promise<Token> {
+        const at = await this.jwtService.signAsync({
+            userId: userId,
+            email: email,
+            role: role,
+        }, {
+            secret: this.config.get('AT_JWT_SECRET_KEY'),
+            expiresIn: 60 * 15, // 15 minutes
+        }
         )
 
         return {
