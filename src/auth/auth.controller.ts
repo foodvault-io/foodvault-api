@@ -10,7 +10,6 @@ import {
 import { Tokens } from './types';
 import { RtJwtGuard, LocalAuthGuard } from '../common/guards';
 import { GetCurrentUser, GetCurrentUserId, Public } from '../common/decorators';
-import { Logger } from '@nestjs/common';
 
 
 @ApiTags('Auth')
@@ -19,8 +18,6 @@ import { Logger } from '@nestjs/common';
     version: '1',
 })
 export class AuthController {
-    log = new Logger('AuthController');
-
     constructor(
         private readonly authService: AuthService,
     ) { }
