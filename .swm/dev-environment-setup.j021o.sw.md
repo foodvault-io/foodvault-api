@@ -2,7 +2,7 @@
 id: j021o
 title: Dev Environment Setup
 file_version: 1.1.2
-app_version: 1.5.0
+app_version: 1.5.1
 ---
 
 To run your local dev environment you will need a few things on your machine. Follow the steps below.
@@ -70,12 +70,12 @@ Full list of scripts for this project:
 22         "start:debug": "nest start --debug --watch",
 23         "start:prod": "node dist/main",
 24         "lint": "eslint \"{src,apps,libs,test}/**/*.ts\" --fix",
-25         "test": "jest",
-26         "test:watch": "jest --watch",
-27         "test:cov": "jest --coverage",
+25         "test": "pnpm run db:test:restart && dotenv -e .env.test -- jest",
+26         "test:watch": "pnpm run db:test:restart && dotenv -e .env.test -- jest --watch",
+27         "test:cov": "pnpm run db:test:restart && dotenv -e .env.test -- jest --coverage",
 28         "make-badges": "istanbul-badges-readme --logo='jest' --badge-style='plastic'",
 29         "make-badges:ci": "pnpm run make-badges -- --ci",
-30         "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
+30         "test:debug": "pnpm run db:test:restart && dotenv -e .env.test -- node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
 31         "test:e2e": "pnpm run db:test:restart && dotenv -e .env.test -- jest --no-cache --watch --config ./test/jest-e2e.json"
 32       },
 ```
