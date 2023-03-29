@@ -8,7 +8,10 @@ import { v4 as uuidv4 } from 'uuid';
 import { BadRequestException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { RoleEnum } from '@prisma/client';
 import * as argon2 from 'argon2';
-import { Token, Tokens } from '../types';
+import { GoogleUser, Token, Tokens } from '../types';
+import { GoogleStrategy } from '../strategies';
+import { PassportModule } from '@nestjs/passport';
+
 
 // Users:
 const id = uuidv4();
@@ -25,6 +28,7 @@ const userArray = [
 
 const oneUser = userArray[0];
 const createUser = { id: 'a uuid', createdAt: new Date, updatedAt: new Date, deletedAt: null, email: 'user@example.com', firstName: userFirstName1, lastName: userLastName1, hashedPassword: argon2.hash('password'), image: null, role: RoleEnum.USER, }
+const user1 = { id: 'a uuid', createdAt: new Date, updatedAt: new Date, deletedAt: null, email: userEmail1, firstName: userFirstName1, lastName: userLastName1, hashedPassword: argon2.hash(userPassword1), image: 'image.jpn', role: RoleEnum.USER, }
 
 // Accounts: 
 const accountId = uuidv4();
@@ -60,6 +64,7 @@ const db = {
     findFirst: jest.fn().mockResolvedValue(oneUser),
     create: jest.fn().mockReturnValue(createUser),
     save: jest.fn(),
+    update: jest.fn().mockReturnValue(user1),
   },
   account: {
     findMany: jest.fn().mockResolvedValue(accountArray),
@@ -88,9 +93,11 @@ describe('AuthService', () => {
   let prisma: PrismaService;
   let config: ConfigService;
   let jwtService: JwtService;
+  let google: GoogleStrategy;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
+      imports: [PassportModule],
       providers: [
         AuthService,  
         ConfigService, 
@@ -98,7 +105,8 @@ describe('AuthService', () => {
         {
           provide: PrismaService,
           useValue: db,
-        }
+        },
+        GoogleStrategy,
       ],
     }).compile();
 
@@ -106,6 +114,7 @@ describe('AuthService', () => {
     prisma = module.get<PrismaService>(PrismaService);
     jwtService = module.get<JwtService>(JwtService);
     config = module.get<ConfigService>(ConfigService);
+    google = module.get<GoogleStrategy>(GoogleStrategy);
   });
 
   it('should be defined', () => {
@@ -424,4 +433,132 @@ describe('AuthService', () => {
       );
     });
   });
+
+  describe('googleLogin() ', () => {
+    it('should be defined', () => {
+      expect(google).toBeDefined();
+    });
+
+    it('Should Create a new User if its first time logging in and return tokens', async () => {
+      const profile: GoogleUser = {
+        providerId: '123456789',
+        provider: 'google',
+        firstName: 'User',
+        lastName: 'Test',
+        email: 'test@email.com',
+        emailValidated: true,
+        profileImage: null,
+      };
+
+      const user = { id: 'a uuid', createdAt: new Date, updatedAt: new Date, deletedAt: null, email: userEmail1, firstName: userFirstName1, lastName: userLastName1, hashedPassword: await argon2.hash(userPassword1), image: null, role: RoleEnum.USER, }
+
+      const tokens: Tokens = {
+        accessToken: 'testAccessToken',
+        refreshToken: 'testRefreshToken',
+      };
+
+      const account = {
+        id: 'a uuid',
+        userId: user.id,
+        providerType: 'oauth-google',
+        provider: 'google',
+        providerAccountId: '1234567',
+        accessToken: tokens.accessToken,
+        accessTokenExpires: accessTokenExpires,
+        tokenType: tokenType,
+        refreshToken: await argon2.hash(refreshToken),
+      }
+
+
+      jest.spyOn(service, 'findOneByEmail').mockResolvedValueOnce(null)
+      jest.spyOn(argon2, 'hash').mockResolvedValueOnce('hashed-id')
+      jest.spyOn(service, 'createUser').mockResolvedValueOnce(user)
+      jest.spyOn(service, 'getTokens').mockResolvedValueOnce(tokens)
+      jest.spyOn(prisma.account, 'create').mockResolvedValueOnce(account)
+      jest.spyOn(service, 'updateRefreshTokenHashLocal').mockResolvedValueOnce()
+
+      const result = await service.googleLogin(profile);
+
+      expect(result).toEqual(tokens);
+    });
+
+    it('Should return tokens if user already exists and signed in with Google before', async () => {
+      const profile: GoogleUser = {
+        providerId: '123456789',
+        provider: 'google',
+        firstName: 'User',
+        lastName: 'Test',
+        email: 'test@email.com',
+        emailValidated: true,
+        profileImage: null,
+      };
+
+      const user = { id: 'a uuid', createdAt: new Date, updatedAt: new Date, deletedAt: null, email: userEmail1, firstName: userFirstName1, lastName: userLastName1, hashedPassword: await argon2.hash(userPassword1), image: null, role: RoleEnum.USER, }
+
+      const tokens: Tokens = {
+        accessToken: 'testAccessToken',
+        refreshToken: 'testRefreshToken',
+      };
+
+      const account = {
+        id: 'a uuid',
+        userId: user.id,
+        providerType: 'oauth-google',
+        provider: 'google',
+        providerAccountId: '123456789',
+        accessToken: tokens.accessToken,
+        accessTokenExpires: accessTokenExpires,
+        tokenType: tokenType,
+        refreshToken: await argon2.hash(refreshToken),
+      }
+
+      jest.spyOn(service, 'findOneByEmail').mockResolvedValueOnce(user)
+      jest.spyOn(prisma.account, 'findFirst').mockResolvedValueOnce(account)
+      jest.spyOn(service, 'getTokens').mockResolvedValueOnce(tokens)
+      jest.spyOn(service, 'updateRefreshTokenHashLocal').mockResolvedValueOnce()
+
+      const result = await service.googleLogin(profile);
+
+      expect(result).toEqual(tokens);
+    });
+
+    it('Should throw an error if user already exists and signed in with Google before but the account is not found', async () => {
+      const profile: GoogleUser = {
+        providerId: '123456789',
+        provider: 'google',
+        firstName: 'User',
+        lastName: 'Test',
+        email: 'test@email.com',
+        emailValidated: true,
+        profileImage: null,
+      };
+
+      const user = { id: 'a uuid', createdAt: new Date, updatedAt: new Date, deletedAt: null, email: userEmail1, firstName: userFirstName1, lastName: userLastName1, hashedPassword: await argon2.hash(userPassword1), image: null, role: RoleEnum.USER, }
+
+      const tokens: Tokens = {
+        accessToken: 'testAccessToken',
+        refreshToken: 'testRefreshToken',
+      };
+
+      const facebookAccount = {
+        id: 'a uuid',
+        userId: user.id,
+        providerType: 'oauth-google',
+        provider: 'facebook',
+        providerAccountId: '123456789',
+        accessToken: tokens.accessToken,
+        accessTokenExpires: accessTokenExpires,
+        tokenType: tokenType,
+        refreshToken: await argon2.hash(refreshToken),
+      }
+
+      jest.spyOn(service, 'findOneByEmail').mockResolvedValueOnce(user)
+      jest.spyOn(prisma.account, 'findFirst').mockResolvedValueOnce(facebookAccount)
+      jest.spyOn(service, 'getTokens').mockResolvedValueOnce(tokens)
+      jest.spyOn(service, 'updateRefreshTokenHashLocal').mockResolvedValueOnce()
+      
+      await expect(service.googleLogin(profile)).rejects.toThrow(new BadRequestException('User already exists'));
+    });
+  });
 });
+

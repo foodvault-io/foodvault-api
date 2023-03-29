@@ -1,4 +1,11 @@
-import { Body, Controller, Post, UseGuards, Request } from '@nestjs/common';
+import { 
+    Body, 
+    Controller, 
+    Post, 
+    UseGuards, 
+    Request, 
+    Get 
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { LocalAuthDto } from './dto';
 import { Login, SignUp } from './entities';
@@ -7,9 +14,18 @@ import {
     ApiResponse,
     ApiTags,
 } from '@nestjs/swagger';
-import { Tokens } from './types';
-import { RtJwtGuard, LocalAuthGuard } from '../common/guards';
-import { GetCurrentUser, GetCurrentUserId, Public } from '../common/decorators';
+import { GoogleUser, Tokens } from './types';
+import { 
+    RtJwtGuard, 
+    LocalAuthGuard, 
+    GoogleAuthGuard 
+} from '../common/guards';
+import { 
+    GetCurrentUser, 
+    GetCurrentUserId, 
+    Public,
+    UserFromOAuth
+} from '../common/decorators';
 
 
 @ApiTags('Auth')
@@ -21,6 +37,8 @@ export class AuthController {
     constructor(
         private readonly authService: AuthService,
     ) { }
+
+    // Local Controllers
 
     @ApiOperation({ summary: 'Create User Using the Local Strategy' })
     @ApiResponse({
@@ -47,11 +65,41 @@ export class AuthController {
         return req.user;
     }
 
+    // Google Controllers
+    @ApiOperation({ summary: 'Sign In Using the Google Strategy' })
+    @ApiResponse({
+        status: 200,
+        description: 'User Signed In',
+    })
+    @Public()
+    @UseGuards(GoogleAuthGuard)
+    @Get('/google')
+    async googleAuth() {
+        console.log('Google Auth Route Initiated')
+    }
+
+    @ApiOperation({ summary: 'Google Strategy Callback Route' })
+    @ApiResponse({
+        status: 200,
+        description: 'User Signed In',
+    })
+    @Public()
+    @UseGuards(GoogleAuthGuard)
+    @Get('/google/callback')
+    async googleAuthCallback(
+        @UserFromOAuth() user: GoogleUser,
+    ) { 
+        return await this.authService.googleLogin(user);
+    }
+
+
+    // Logout and Refresh Global Controllers
 
     @Post('logout')
     logout(@GetCurrentUserId() userId: string) {
         return this.authService.localLogout(userId);
     }
+
 
     @Public()
     @UseGuards(RtJwtGuard)

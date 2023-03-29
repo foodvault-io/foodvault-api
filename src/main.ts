@@ -41,14 +41,13 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('FoodVault API')
     .setDescription('FoodVault API description')
-    .setVersion('v1')
-    .addTag('FoodVault')
+    .setVersion('1.0.0')
     .build();
 
   const options: SwaggerDocumentOptions = {
     operationIdFactory: (
       controllerKey: string,
-      methodKey: string
+      methodKey: string,
     ) => methodKey
   };
 
