@@ -118,7 +118,9 @@ export class AuthController {
     async facebookAuthCallback(
         @UserFromOAuth() user: FacebookUser,
     ) {
-        return await this.authService.facebookLogin(user);
+        return {
+            user,
+        };
     }
 
     // Logout and Refresh Global Controllers
