@@ -14,11 +14,12 @@ import {
     ApiResponse,
     ApiTags,
 } from '@nestjs/swagger';
-import { GoogleUser, Tokens } from './types';
+import { FacebookUser, GoogleUser, Tokens } from './types';
 import { 
     RtJwtGuard, 
     LocalAuthGuard, 
-    GoogleAuthGuard 
+    GoogleAuthGuard, 
+    FacebookAuthGuard
 } from '../common/guards';
 import { 
     GetCurrentUser, 
@@ -92,6 +93,33 @@ export class AuthController {
         return await this.authService.googleLogin(user);
     }
 
+
+    // Facebook Controllers
+    @ApiOperation({ summary: 'Sign In Using the Facebook Strategy' })
+    @ApiResponse({
+        status: 200,
+        description: 'User Signed In',
+    })
+    @Public()
+    @UseGuards(FacebookAuthGuard)
+    @Get('/facebook')
+    async facebookAuth() {
+        console.log('Facebook Auth Route Initiated')
+    }
+
+    @ApiOperation({ summary: 'Facebook Strategy Callback Route' })
+    @ApiResponse({
+        status: 200,
+        description: 'User Signed In',
+    })
+    @Public()
+    @UseGuards(FacebookAuthGuard)
+    @Get('/facebook/callback')
+    async facebookAuthCallback(
+        @UserFromOAuth() user: FacebookUser,
+    ) {
+        return await this.authService.facebookLogin(user);
+    }
 
     // Logout and Refresh Global Controllers
 

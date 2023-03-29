@@ -10,7 +10,7 @@ import { LocalAuthDto } from './dto';
 import { User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import * as argon2 from 'argon2';
-import { Token, Tokens, GoogleUser } from './types';
+import { Token, Tokens, GoogleUser, FacebookUser } from './types';
 
 
 @Injectable()
@@ -86,8 +86,8 @@ export class AuthService {
         }
     }
 
+    // TODO: Merge Google and Facebook Login Methods into OAuth Login Method:
     // Google Login Methods:
-
     async googleLogin(googleUser: GoogleUser): Promise<Tokens> {
         const existingUser = await this.findOneByEmail(googleUser.email);
 
@@ -143,7 +143,72 @@ export class AuthService {
                 } 
             });
 
-            if (account.provider === 'google' && account.providerAccountId === googleUser.providerId) {
+            if (account.provider === googleUser.provider && account.providerAccountId === googleUser.providerId) {
+                const tokens = await this.getTokens(existingUser.id, existingUser.email, existingUser.role);
+                await this.updateRefreshTokenHashLocal(existingUser.id, tokens.refreshToken);
+                return tokens;
+            } else {
+                throw new BadRequestException('User already exists');
+            }
+        }
+    }
+    // Facebook Login Methods:
+    async facebookLogin(facebookUser: FacebookUser): Promise<Tokens> {
+        const existingUser = await this.findOneByEmail(facebookUser.email);
+
+        if (!existingUser) {
+            const secureProviderId = await argon2.hash(facebookUser.providerId);
+
+            const newUser = await this.createUser({
+                email: facebookUser.email,
+                firstName: facebookUser.firstName,
+                lastName: facebookUser.lastName,
+                password: secureProviderId,
+            });
+
+            if (facebookUser.profileImage) {
+                await this.prisma.user.update({
+                    where: {
+                        id: newUser.id,
+                    },
+                    data: {
+                        image: facebookUser.profileImage,
+                    }
+                });
+            }
+
+            // Create Tokens:
+            const tokens = await this.getTokens(
+                newUser.id,
+                newUser.email,
+                newUser.role,
+            )
+            // Create Account:
+            await this.prisma.account.create({
+                data: {
+                    userId: newUser.id,
+                    providerType: 'oauth-facebook',
+                    provider: facebookUser.provider,
+                    providerAccountId: facebookUser.providerId,
+                    accessToken: tokens.accessToken,
+                    accessTokenExpires: 60 * 15,
+                    tokenType: 'Bearer',
+                }
+            });
+
+            await this.updateRefreshTokenHashLocal(newUser.id, tokens.refreshToken);
+            
+            return tokens;
+        } else {
+            const account = await this.prisma.account.findFirst({
+                where: {
+                    userId: existingUser.id,
+                    provider: facebookUser.provider,
+                    providerAccountId: facebookUser.providerId,
+                }
+            });
+
+            if (account.provider === facebookUser.provider && account.providerAccountId === facebookUser.providerId) {
                 const tokens = await this.getTokens(existingUser.id, existingUser.email, existingUser.role);
                 await this.updateRefreshTokenHashLocal(existingUser.id, tokens.refreshToken);
                 return tokens;
@@ -153,8 +218,8 @@ export class AuthService {
         }
     }
 
-    // Local Logout Methods:
 
+    // Local Logout Methods:
     async localLogout(userId: string) {
         await this.prisma.account.updateMany({
             where: {
@@ -171,7 +236,6 @@ export class AuthService {
 
 
     // JWT Methods:
-
     async updateRefreshTokenHashLocal(userId: string, refreshToken: string) {
         const hash = await argon2.hash(refreshToken);
         const user = await this.findOneById(userId);
