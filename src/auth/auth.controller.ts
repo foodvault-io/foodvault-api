@@ -19,7 +19,8 @@ import {
     RtJwtGuard, 
     LocalAuthGuard, 
     GoogleAuthGuard, 
-    FacebookAuthGuard
+    FacebookAuthGuard,
+    LinkedInAuthGuard
 } from '../common/guards';
 import { 
     GetCurrentUser, 
@@ -119,6 +120,34 @@ export class AuthController {
     @UseGuards(FacebookAuthGuard)
     @Get('/facebook/callback')
     async facebookAuthCallback(
+        @UserFromOAuth() user: OAuthUser,
+    ) {
+        return await this.authService.socialLogin(user);
+    }
+
+    // LinkedIn Controllers
+    @ApiOperation({ summary: 'Sign In / Sign Up Route for LinkedIn' })
+    @ApiResponse({
+        status: 200,
+        description: 'User Signed In / Signed Up With LinkedIn Strategy',
+    })
+    @Public()
+    @UseGuards(LinkedInAuthGuard)
+    @Get('/linkedin')
+    async linkedInAuth() {
+        console.log('LinkedIn Auth Route Initiated')
+    }
+
+    @ApiOperation({ summary: 'LinkedIn Strategy Callback Route' })
+    @ApiResponse({
+        status: 200,
+        description: 'Return Data From LinkedIn Strategy',
+        type: OpenAuthUser,
+    })
+    @Public()
+    @UseGuards(LinkedInAuthGuard)
+    @Get('/linkedin/callback')
+    async linkedInAuthCallback(
         @UserFromOAuth() user: OAuthUser,
     ) {
         return await this.authService.socialLogin(user);

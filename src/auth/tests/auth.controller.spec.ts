@@ -91,7 +91,7 @@ describe('AuthController', () => {
     it('should call authService.socialLogin with the user returned from UserFromOAuth', async () => {
       const profile: OAuthUser = {
         providerId: '123456789',
-        provider: 'google',
+        provider: 'facebook',
         firstName: 'User',
         lastName: 'Test',
         email: 'test@email.com',
@@ -102,6 +102,36 @@ describe('AuthController', () => {
 
       const spy = jest.spyOn(authService, 'socialLogin').mockReturnValueOnce(undefined);
       controller.facebookAuthCallback(profile);
+
+      expect(spy).toHaveBeenCalledWith(profile);
+    });
+  });
+
+  describe('linkedInAuth() ', () => {
+    it('should log "LinkedIn Auth Route Initiated"', async () => {
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      controller.linkedInAuth();
+
+      expect(consoleSpy).toHaveBeenCalledWith('LinkedIn Auth Route Initiated');
+    });
+  });
+
+  describe('linkedInAuthCallback() ', () => {
+    it('should call authService.socialLogin with the user returned from UserFromOAuth', async () => {
+      const profile: OAuthUser = {
+        providerId: '123456789',
+        provider: 'linkedin',
+        firstName: 'User',
+        lastName: 'Test',
+        email: 'test@email.com',
+        emailValidated: true,
+        photo: null,
+      };
+
+
+      const spy = jest.spyOn(authService, 'socialLogin').mockReturnValueOnce(undefined);
+      controller.linkedInAuthCallback(profile);
 
       expect(spy).toHaveBeenCalledWith(profile);
     });
