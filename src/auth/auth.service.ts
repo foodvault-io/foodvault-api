@@ -10,7 +10,7 @@ import { LocalAuthDto } from './dto';
 import { User } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import * as argon2 from 'argon2';
-import { Token, Tokens, GoogleUser } from './types';
+import { Token, Tokens, OAuthUser } from './types';
 
 
 @Injectable()
@@ -86,28 +86,27 @@ export class AuthService {
         }
     }
 
-    // Google Login Methods:
-
-    async googleLogin(googleUser: GoogleUser): Promise<Tokens> {
-        const existingUser = await this.findOneByEmail(googleUser.email);
+    // OAuth Login Methods:
+    async socialLogin(oAuthUser: OAuthUser): Promise<Token> {
+        const existingUser = await this.findOneByEmail(oAuthUser.email);
 
         if (!existingUser) {
-            const secureProviderId = await argon2.hash(googleUser.providerId);
+            const secureProviderId = await argon2.hash(oAuthUser.providerId);
 
             const newUser = await this.createUser({
-                email: googleUser.email,
-                firstName: googleUser.firstName,
-                lastName: googleUser.lastName,
+                email: oAuthUser.email,
+                firstName: oAuthUser.firstName,
+                lastName: oAuthUser.lastName,
                 password: secureProviderId,
             });
 
-            if (googleUser.profileImage) {
+            if (oAuthUser.photo) {
                 await this.prisma.user.update({
                     where: {
                         id: newUser.id,
                     },
                     data: {
-                        image: googleUser.profileImage,
+                        image: oAuthUser.photo,
                     }
                 });
             }
@@ -122,9 +121,9 @@ export class AuthService {
             await this.prisma.account.create({
                 data: {
                     userId: newUser.id,
-                    providerType: 'oauth-google',
-                    provider: googleUser.provider,
-                    providerAccountId: googleUser.providerId,
+                    providerType: 'oauth2',
+                    provider: oAuthUser.provider,
+                    providerAccountId: oAuthUser.providerId,
                     accessToken: tokens.accessToken,
                     accessTokenExpires: 60 * 15,
                     tokenType: 'Bearer',
@@ -138,23 +137,24 @@ export class AuthService {
             const account = await this.prisma.account.findFirst({
                 where: {
                     userId: existingUser.id,
-                    provider: googleUser.provider,
-                    providerAccountId: googleUser.providerId,
                 } 
             });
 
-            if (account.provider === 'google' && account.providerAccountId === googleUser.providerId) {
+            if (!account) {
+                throw new BadRequestException('Invalid Provider Account');
+            } else if (account.provider !== oAuthUser.provider) {
+                throw new BadRequestException(`Previously signed up with ${account.provider}`);
+            } else if (account.providerAccountId === oAuthUser.providerId) {
                 const tokens = await this.getTokens(existingUser.id, existingUser.email, existingUser.role);
                 await this.updateRefreshTokenHashLocal(existingUser.id, tokens.refreshToken);
                 return tokens;
             } else {
-                throw new BadRequestException('User already exists');
+                throw new BadRequestException('Invalid Provider Account');
             }
         }
     }
-
-    // Local Logout Methods:
-
+    
+    // Logout Methods:
     async localLogout(userId: string) {
         await this.prisma.account.updateMany({
             where: {
@@ -171,7 +171,6 @@ export class AuthService {
 
 
     // JWT Methods:
-
     async updateRefreshTokenHashLocal(userId: string, refreshToken: string) {
         const hash = await argon2.hash(refreshToken);
         const user = await this.findOneById(userId);

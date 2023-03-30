@@ -1,20 +1,22 @@
 import { PassportStrategy } from "@nestjs/passport";
-import { Strategy, Profile, VerifyCallback } from "passport-google-oauth20";
+import { Strategy, Profile } from "passport-facebook";
 import { Injectable } from "@nestjs/common";
 import { AuthService } from "../auth.service";
 import { ConfigService } from "@nestjs/config";
 
 @Injectable()
-export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
+export class FacebookStrategy extends PassportStrategy(Strategy, 'facebook') {
     constructor(
         private readonly authService: AuthService,
         configService: ConfigService
     ) {
+        // TODO: Create Facebook app and get clientID and clientSecret
         super({
-            clientID: configService.get("GOOGLE_CLIENT_ID"),
-            clientSecret: configService.get("GOOGLE_CLIENT_SECRET"),
-            callbackURL: configService.get("GOOGLE_CALLBACK_URL"),
-            scope: ['email', 'profile'],
+            clientID: configService.get("FB_FOODVAULT_CLIENT_ID"),
+            clientSecret: configService.get("FB_FOODVAULT_CLIENT_SECRET"),
+            callbackURL: configService.get("FB_FOODVAULT_CALLBACK_URL"),
+            scope: ['email', 'public_profile'],
+            profileFields: ['email', 'name', 'photos'],
         });
     }
 
@@ -22,12 +24,12 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
         accessToken: string,
         refreshToken: string,
         profile: Profile,
-        done: VerifyCallback
+        done: (err: any, user: any, info?: any) => void,
     ): Promise<any> {
-        const { id, name, emails, provider, photos } = profile;
+        const { emails, name, id, photos, provider } = profile;
 
         if (photos === undefined) {
-            const googleUser = {
+            const facebookUser = {
                 providerId: id,
                 provider: provider,
                 firstName: name.givenName,
@@ -35,9 +37,9 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
                 email: emails[0].value,
             }
 
-            done(null, googleUser);
+            done(null, facebookUser);
         } else {
-            const googleUser = {
+            const facebookUser = {
                 providerId: id,
                 provider: provider,
                 firstName: name.givenName,
@@ -46,7 +48,7 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
                 photo: photos[0].value,
             }
 
-            done(null, googleUser);
+            done(null, facebookUser);
         }
     }
 }

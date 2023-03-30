@@ -1,3 +1,3 @@
 export * from './tokens.type';
 export * from './jwt-payload.type';
-export * from './google-user-returned';
+export * from './open-auth-user.type';
