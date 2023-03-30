@@ -12,10 +12,11 @@ export class FacebookStrategy extends PassportStrategy(Strategy, 'facebook') {
     ) {
         // TODO: Create Facebook app and get clientID and clientSecret
         super({
-            clientID: configService.get("FACEBOOK_CLIENT_ID"),
-            clientSecret: configService.get("FACEBOOK_CLIENT_SECRET"),
-            callbackURL: configService.get("FACEBOOK_CALLBACK_URL"),
-            profileFields: ['id', 'photos', 'email', 'name'],
+            clientID: configService.get("FB_FOODVAULT_CLIENT_ID"),
+            clientSecret: configService.get("FB_FOODVAULT_CLIENT_SECRET"),
+            callbackURL: configService.get("FB_FOODVAULT_CALLBACK_URL"),
+            scope: ['email', 'public_profile'],
+            profileFields: ['email', 'name', 'photos'],
         });
     }
 
@@ -23,22 +24,31 @@ export class FacebookStrategy extends PassportStrategy(Strategy, 'facebook') {
         accessToken: string,
         refreshToken: string,
         profile: Profile,
-        done: any
+        done: (err: any, user: any, info?: any) => void,
     ): Promise<any> {
-        const { id, name, emails, photos, provider} = profile;
+        const { emails, name, id, photos, provider } = profile;
 
-        const facebookUser = {
-            providerId: id,
-            provider: provider, 
-            firstName: name.givenName,
-            lastName: name.familyName,
-            email: emails[0].value,
-            emailValidated: emails,
-            profileImage: photos[0].value,
-            accessToken,
-            refreshToken,
+        if (photos === undefined) {
+            const facebookUser = {
+                providerId: id,
+                provider: provider,
+                firstName: name.givenName,
+                lastName: name.familyName,
+                email: emails[0].value,
+            }
+
+            done(null, facebookUser);
+        } else {
+            const facebookUser = {
+                providerId: id,
+                provider: provider,
+                firstName: name.givenName,
+                lastName: name.familyName,
+                email: emails[0].value,
+                photo: photos[0].value,
+            }
+
+            done(null, facebookUser);
         }
-
-        done(null, facebookUser);
     }
 }

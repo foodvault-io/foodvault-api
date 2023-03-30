@@ -1,11 +1,11 @@
-export type FacebookUser = {
+export type OAuthUser = {
     providerId: string;
     provider: string;
     firstName: string;
     lastName: string;
     email: string;
     emailValidated?: boolean;
-    profileImage?: string;
+    photo?: string;
     accessToken?: string;
     refreshToken?: string;
 }

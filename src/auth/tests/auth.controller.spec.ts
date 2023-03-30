@@ -2,20 +2,16 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from '../auth.controller';
 import { AuthService } from '../auth.service';
 import { LocalAuthDto } from '../dto';
-import { GoogleUser, Tokens } from '../types';
+import { OAuthUser, Tokens } from '../types';
 import { PrismaService } from '../../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { createMock } from '@golevelup/ts-jest';
-import { ExecutionContext } from '@nestjs/common';
-import { GoogleAuthGuard } from '../../common/guards';
 
 
 describe('AuthController', () => {
   let controller: AuthController;
   let authService: AuthService;
-  let googleAuthGuard: GoogleAuthGuard;
-
+  
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
@@ -24,8 +20,7 @@ describe('AuthController', () => {
 
     controller = module.get<AuthController>(AuthController);
     authService = module.get<AuthService>(AuthService);
-    googleAuthGuard = new GoogleAuthGuard(authService);
-  });
+   });
 
   describe('signUpLocally()', () => {
     const signUpDto: LocalAuthDto = { email: 'test', password: 'password', firstName: 'John', lastName: 'Doe' };
@@ -41,18 +36,18 @@ describe('AuthController', () => {
   });
 
   describe('signInLocally()', () => {
-    const user = { id: '1', username: 'test' };
+    it('should return tokens when signed in', () => {
+      const tokens: Tokens = {
+        accessToken:'access_token',
+        refreshToken: 'refresh_token',
+      }
+      const result = controller.signInLocally(tokens);
 
-    it('should return user when signed in', () => {
-      const req = { user };
-
-      const result = controller.signInLocally(req);
-
-      expect(result).toEqual(user);
+      expect(result).toEqual(tokens);
     });
   });
 
-  describe('googleAuth', () => {
+  describe('googleAuth()', () => {
     it('should log "Google Auth Route Initiated"', async () => {
       const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
 
@@ -62,21 +57,51 @@ describe('AuthController', () => {
     });
   });
 
-  describe('googleAuthCallback', () => {
-    it('should call authService.googleLogin with the user returned from UserFromOAuth', async () => {
-      const profile: GoogleUser = {
+  describe('googleAuthCallback() ', () => {
+    it('should call authService.socialLogin with the user returned from UserFromOAuth', async () => {
+      const profile: OAuthUser = {
         providerId: '123456789',
         provider: 'google',
         firstName: 'User',
         lastName: 'Test',
         email: 'test@email.com',
         emailValidated: true,
-        profileImage: null,
+        photo: null,
       };
 
     
-      const spy = jest.spyOn(authService, 'googleLogin').mockReturnValueOnce(undefined);
+      const spy = jest.spyOn(authService, 'socialLogin').mockReturnValueOnce(undefined);
       controller.googleAuthCallback(profile);
+
+      expect(spy).toHaveBeenCalledWith(profile);
+    });
+  });
+
+  describe('facebookAuth() ', () => {
+    it('should log "Facebook Auth Route Initiated"', async () => {
+      const consoleSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      controller.facebookAuth();
+
+      expect(consoleSpy).toHaveBeenCalledWith('Facebook Auth Route Initiated');
+    });
+  });
+
+  describe('facebookAuthCallback() ', () => {
+    it('should call authService.socialLogin with the user returned from UserFromOAuth', async () => {
+      const profile: OAuthUser = {
+        providerId: '123456789',
+        provider: 'google',
+        firstName: 'User',
+        lastName: 'Test',
+        email: 'test@email.com',
+        emailValidated: true,
+        photo: null,
+      };
+
+
+      const spy = jest.spyOn(authService, 'socialLogin').mockReturnValueOnce(undefined);
+      controller.facebookAuthCallback(profile);
 
       expect(spy).toHaveBeenCalledWith(profile);
     });
