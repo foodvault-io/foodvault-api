@@ -7,7 +7,8 @@ import {
   AccessJwtStrategy, 
   LocalStrategy, 
   GoogleStrategy, 
-  FacebookStrategy
+  FacebookStrategy,
+  LinkedInStrategy
 } from './strategies';
 import { JwtModule } from '@nestjs/jwt';
 
@@ -22,7 +23,8 @@ import { JwtModule } from '@nestjs/jwt';
     RefreshJwtStrategy,
     LocalStrategy,
     GoogleStrategy,
-    FacebookStrategy
+    FacebookStrategy,
+    LinkedInStrategy
   ],
   controllers: [AuthController],
   exports: [AuthService]

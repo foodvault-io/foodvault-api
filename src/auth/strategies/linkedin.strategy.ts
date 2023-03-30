@@ -1,21 +1,20 @@
 import { PassportStrategy } from "@nestjs/passport";
-import { Strategy, Profile } from "passport-facebook";
+import { Strategy, Profile } from "passport-linkedin-oauth2";
 import { Injectable } from "@nestjs/common";
 import { AuthService } from "../auth.service";
 import { ConfigService } from "@nestjs/config";
 
 @Injectable()
-export class FacebookStrategy extends PassportStrategy(Strategy, 'facebook') {
+export class LinkedInStrategy extends PassportStrategy(Strategy, 'linkedin') {
     constructor(
         private readonly authService: AuthService,
         configService: ConfigService
     ) {
         super({
-            clientID: configService.get("FB_FOODVAULT_CLIENT_ID"),
-            clientSecret: configService.get("FB_FOODVAULT_CLIENT_SECRET"),
-            callbackURL: configService.get("FB_FOODVAULT_CALLBACK_URL"),
-            scope: ['email', 'public_profile'],
-            profileFields: ['email', 'name', 'photos'],
+            clientID: configService.get("LINKEDIN_FOODVAULT_CLIENT_ID"),
+            clientSecret: configService.get("LINKEDIN_FOODVAULT_CLIENT_SECRET"),
+            callbackURL: configService.get("LINKEDIN_FOODVAULT_CALLBACK_URL"),
+            scope: ['r_emailaddress', 'r_liteprofile']
         });
     }
 
@@ -28,7 +27,7 @@ export class FacebookStrategy extends PassportStrategy(Strategy, 'facebook') {
         const { emails, name, id, photos, provider } = profile;
 
         if (photos === undefined) {
-            const facebookUser = {
+            const linkedInUser = {
                 providerId: id,
                 provider: provider,
                 firstName: name.givenName,
@@ -36,9 +35,9 @@ export class FacebookStrategy extends PassportStrategy(Strategy, 'facebook') {
                 email: emails[0].value,
             }
 
-            done(null, facebookUser);
+            done(null, linkedInUser);
         } else {
-            const facebookUser = {
+            const linkedInUser = {
                 providerId: id,
                 provider: provider,
                 firstName: name.givenName,
@@ -47,7 +46,7 @@ export class FacebookStrategy extends PassportStrategy(Strategy, 'facebook') {
                 photo: photos[0].value,
             }
 
-            done(null, facebookUser);
+            done(null, linkedInUser);
         }
     }
 }
